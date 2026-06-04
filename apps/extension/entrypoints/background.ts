@@ -1,5 +1,6 @@
 import { defineBackground } from 'wxt/utils/define-background';
 import { HandsConnection } from '../src/connection.js';
+import { scrapeViaWindow } from '../src/render/open-profile.js';
 import type { Job, Result } from '@aura/contract';
 
 export default defineBackground(() => {
@@ -34,10 +35,26 @@ export default defineBackground(() => {
   const PROFILE_URL_RE = /^https:\/\/www\.linkedin\.com\/in\/[^/?#]+/;
 
   async function executeJob(job: Job): Promise<Result> {
-    if (job.type !== 'visit') return { jobId: job.id, status: 'skipped', error: 'M0 supports visit only' };
+    if (job.type !== 'visit' && job.type !== 'scrapeProfile') {
+      return { jobId: job.id, status: 'skipped', error: `unsupported job type: ${job.type}` };
+    }
     if (!PROFILE_URL_RE.test(job.target)) {
       return { jobId: job.id, status: 'skipped', error: 'invalid LinkedIn profile URL' };
     }
+
+    // M1: rich scrape — render in a non-intrusive popup window, scroll to load the lazy
+    // sections, parse the hydrated DOM, and return a ScrapedProfile. The window steals no focus.
+    if (job.type === 'scrapeProfile') {
+      try {
+        const data = await scrapeViaWindow(job.target);
+        const ok = !!(data && typeof data === 'object' && (data as { fullName?: string }).fullName);
+        return { jobId: job.id, status: ok ? 'ok' : 'failed', data: data as Record<string, unknown> };
+      } catch (err) {
+        return { jobId: job.id, status: 'failed', error: String(err) };
+      }
+    }
+
+    // M0: lightweight 'visit' — confirm we reached the right person (name only).
     let tabId: number | undefined;
     try {
       // active:true (visible tab): LinkedIn does NOT render the profile body (the name <h1>)

@@ -33,3 +33,6 @@ Thumbs.db
 # WXT generated dir + build output
 .wxt/
 .output/
+
+# Playwright MCP scratch (snapshots/screenshots)
+.playwright-mcp/
