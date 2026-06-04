@@ -1,6 +1,6 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { isVoyagerUrl } from '../src/voyager/targets.js';
-import { extractEmbeddedVoyagerJson } from '../src/voyager/embedded.js';
+import { extractEmbeddedVoyagerJson, looksLikeVoyager } from '../src/voyager/embedded.js';
 import { VOYAGER_MSG, VOYAGER_REPLAY_REQUEST, type VoyagerEnvelope } from '../src/voyager/capture.js';
 
 /**
@@ -120,7 +120,32 @@ export default defineContentScript({
       return origSend.apply(this, sendArgs);
     } as typeof xhrProto.send;
 
-    // ── server-rendered embedded JSON (capture early; the SPA removes it after hydration) ──
+    // ── server-rendered embedded JSON ────────────────────────────────────────────
+    // LinkedIn server-renders the profile and ships the data in <code> blocks that it
+    // STRIPS during hydration. The reliable capture is a MutationObserver from
+    // document_start that grabs each <code> the instant it's inserted — before removal.
+    const seenCode = new WeakSet<Element>();
+    const grabCodeNode = (el: Element) => {
+      if (el.tagName !== 'CODE' || seenCode.has(el)) return;
+      seenCode.add(el);
+      const t = (el.textContent ?? '').trim();
+      if (looksLikeVoyager(t)) post('embedded-code', t);
+    };
+    const codeObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (node.nodeType !== 1) continue;
+          const el = node as Element;
+          if (el.tagName === 'CODE') grabCodeNode(el);
+          else el.querySelectorAll?.('code').forEach(grabCodeNode);
+        }
+      }
+    });
+    codeObserver.observe(document.documentElement, { childList: true, subtree: true });
+    setTimeout(() => codeObserver.disconnect(), 25000); // stop once the page has settled
+
+    // Belt-and-suspenders: also sweep the live DOM a few times (catches any <code> already
+    // present, plus the older script#rehydrate-data). Duplicates are harmless (graph dedupes).
     const grabEmbedded = () => {
       try {
         for (const s of extractEmbeddedVoyagerJson(document)) post('embedded', s);
@@ -133,9 +158,6 @@ export default defineContentScript({
     } else {
       grabEmbedded();
     }
-    // LinkedIn injects some <code> blocks during hydration (after DOMContentLoaded); a couple
-    // of delayed re-grabs catch those before the SPA strips them. Duplicates are harmless —
-    // the entity graph dedupes by URN. (fetch/XHR interception remains the primary source.)
     setTimeout(grabEmbedded, 3000);
     setTimeout(grabEmbedded, 8000);
   },
