@@ -48,6 +48,7 @@ describe('waitForProfile', () => {
     expect(typeof out.diagnostics!.h1Count).toBe('number');
     expect(typeof out.diagnostics!.authWall).toBe('boolean');
     expect(out.diagnostics!.authWall).toBe(true);
+    expect(out.diagnostics!.authWallSignals).toContain('title');
     expect(out.diagnostics!.waitedMs).toBeGreaterThanOrEqual(200);
     expect(typeof out.diagnostics!.readyState).toBe('string');
     expect(Array.isArray(out.diagnostics!.h1Texts)).toBe(true);
@@ -63,5 +64,18 @@ describe('waitForProfile', () => {
     expect(out.loaded).toBe(false);
     expect(out.diagnostics!.authWall).toBe(false);
     expect(out.diagnostics!.h1Count).toBe(0);
+  });
+
+  it('does NOT flag a logged-in profile as an auth wall when only the page chrome says "Sign in"', async () => {
+    // Render-timeout on a logged-in page: title is the person; a nav/footer contains "Sign in".
+    // The precise heuristic (title/url/login-form) must NOT false-positive here.
+    const doc = new DOMParser().parseFromString(
+      '<html><head><title>Ada Lovelace | LinkedIn</title></head><body><nav>Sign in</nav><main></main></body></html>',
+      'text/html',
+    );
+    const out = await waitForProfile(doc, 150);
+    expect(out.loaded).toBe(false);
+    expect(out.diagnostics!.authWall).toBe(false);
+    expect(out.diagnostics!.authWallSignals).toEqual([]);
   });
 });

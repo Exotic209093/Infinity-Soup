@@ -7,6 +7,7 @@ export interface ProfileDiagnostics {
   h1Count: number;
   h1Texts: string[];
   authWall: boolean;
+  authWallSignals: string[];
   readyState: string;
   waitedMs: number;
 }
@@ -15,20 +16,34 @@ export interface ProfileReadResult extends ProfileConfirmation {
   diagnostics?: ProfileDiagnostics;
 }
 
-const AUTH_WALL_RE = /sign in|join now|join linkedin|new to linkedin|sign in to/i;
+// Auth-wall detection uses high-precision signals (URL, title, login-form fields) —
+// NOT a full body-text scan: a logged-in profile's nav/footer contains "Sign in",
+// which would false-flag a slow render as an auth wall and mislead diagnosis.
+const AUTH_WALL_TITLE_RE = /sign in|sign up|join linkedin|security verification/i;
+const AUTH_WALL_URL_RE = /\/(authwall|login|checkpoint|signup|uas\/login)/i;
+const LOGIN_FIELD_SEL =
+  'input[type="password"], input[name="session_key"], input[name="session_password"], form[action*="login"], #username';
+
+function detectAuthWall(doc: Document): { authWall: boolean; signals: string[] } {
+  const signals: string[] = [];
+  const url = doc.defaultView?.location?.href ?? '';
+  if (AUTH_WALL_URL_RE.test(url)) signals.push('url');
+  if (AUTH_WALL_TITLE_RE.test(doc.title)) signals.push('title');
+  if (doc.querySelector(LOGIN_FIELD_SEL)) signals.push('login-form');
+  return { authWall: signals.length > 0, signals };
+}
 
 function collectDiagnostics(doc: Document, waitedMs: number): ProfileDiagnostics {
   const h1s = Array.from(doc.querySelectorAll('h1'));
   const h1Texts = h1s.map((h) => h.textContent?.trim() ?? '').filter(Boolean);
-  const view = doc.defaultView;
-  const url = view?.location?.href ?? '';
-  const bodyText = doc.body?.textContent ?? '';
+  const { authWall, signals } = detectAuthWall(doc);
   return {
-    url,
+    url: doc.defaultView?.location?.href ?? '',
     title: doc.title,
     h1Count: h1s.length,
     h1Texts,
-    authWall: AUTH_WALL_RE.test(bodyText),
+    authWall,
+    authWallSignals: signals,
     readyState: doc.readyState,
     waitedMs,
   };
