@@ -7,8 +7,8 @@ export default defineContentScript({
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (msg?.kind === 'readProfile') {
         sendResponse(parseProfileConfirmation(document));
+        return true;
       }
-      return true;
     });
   },
 });
