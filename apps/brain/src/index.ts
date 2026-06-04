@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { WebSocketServer } from 'ws';
 import { loadConfig } from './config.js';
 import { JobStore } from './db/store.js';
@@ -13,12 +15,9 @@ const DATA_DIR = '.aura';
 const config = loadConfig(DATA_DIR);
 
 const sqlite = new Database(join(DATA_DIR, 'aura.sqlite'));
-sqlite.exec(`CREATE TABLE IF NOT EXISTS jobs (
-  id TEXT PRIMARY KEY, type TEXT NOT NULL, target TEXT NOT NULL,
-  payload TEXT NOT NULL DEFAULT '{}', status TEXT NOT NULL DEFAULT 'queued',
-  result TEXT, created_at INTEGER NOT NULL, dispatched_at INTEGER, completed_at INTEGER
-);`);
+sqlite.pragma('foreign_keys = ON');
 const db = drizzle(sqlite);
+migrate(db, { migrationsFolder: join(dirname(fileURLToPath(import.meta.url)), '..', 'drizzle') }); // src/ -> apps/brain/drizzle
 const store = new JobStore(db);
 
 const wss = new WebSocketServer({ port: config.port, path: '/ws' });

@@ -1,17 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { JobStore } from './store.js';
+
+const MIGRATIONS = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'drizzle'); // src/db/ -> apps/brain/drizzle
 
 function freshStore() {
   const sqlite = new Database(':memory:');
+  sqlite.pragma('foreign_keys = ON');
   const db = drizzle(sqlite);
-  sqlite.exec(`CREATE TABLE jobs (
-    id TEXT PRIMARY KEY, type TEXT NOT NULL, target TEXT NOT NULL,
-    payload TEXT NOT NULL DEFAULT '{}', status TEXT NOT NULL DEFAULT 'queued',
-    result TEXT, created_at INTEGER NOT NULL,
-    dispatched_at INTEGER, completed_at INTEGER
-  );`);
+  migrate(db, { migrationsFolder: MIGRATIONS });
   return new JobStore(db);
 }
 

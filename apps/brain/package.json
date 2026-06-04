@@ -7,7 +7,9 @@
     "typecheck": "tsc --noEmit",
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "enqueue": "tsx src/enqueue.ts"
+    "enqueue": "tsx src/enqueue.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@aura/contract": "workspace:*",
