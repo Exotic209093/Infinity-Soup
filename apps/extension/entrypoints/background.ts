@@ -29,16 +29,30 @@ export default defineBackground(() => {
     }
   }
 
+  // Only act on real /in/<slug> profile URLs — short-circuits invalid targets (e.g. '.../in/'
+  // with no slug) without burning a tab.
+  const PROFILE_URL_RE = /^https:\/\/www\.linkedin\.com\/in\/[^/?#]+/;
+
   async function executeJob(job: Job): Promise<Result> {
     if (job.type !== 'visit') return { jobId: job.id, status: 'skipped', error: 'M0 supports visit only' };
+    if (!PROFILE_URL_RE.test(job.target)) {
+      return { jobId: job.id, status: 'skipped', error: 'invalid LinkedIn profile URL' };
+    }
     let tabId: number | undefined;
     try {
+      // active:false (background tab) is fine — the content script waits via MutationObserver,
+      // which is immune to background timer throttling, so we never steal the user's focus.
       const tab = await chrome.tabs.create({ url: job.target, active: false });
       if (tab.id == null) throw new Error('chrome.tabs.create returned a tab with no id');
       tabId = tab.id;
       await waitForComplete(tabId);
-      const confirmation = await chrome.tabs.sendMessage(tabId, { kind: 'readProfile' });
-      return { jobId: job.id, status: confirmation.loaded ? 'ok' : 'failed', data: confirmation };
+      const c = await chrome.tabs.sendMessage(tabId, { kind: 'readProfile' });
+      return {
+        jobId: job.id,
+        status: c.loaded ? 'ok' : 'failed',
+        data: { loaded: c.loaded, fullName: c.fullName },
+        observed: c.diagnostics,
+      };
     } catch (err) {
       return { jobId: job.id, status: 'failed', error: String(err) };
     } finally {
@@ -46,16 +60,24 @@ export default defineBackground(() => {
     }
   }
 
-  // M0: fixed delay after load to let LinkedIn's SPA hydrate the top card.
-  // Phase 1B: replace with a MutationObserver on the profile <h1> for reliability on slow machines.
-  function waitForComplete(tabId: number): Promise<void> {
+  // Resolve as soon as navigation settles ('complete'). Readiness of the profile name is now
+  // owned by the content script's condition-based wait (MutationObserver on the top-card <h1>),
+  // so the old fixed 1500ms guess is gone. A safety cap guarantees sendMessage still runs even
+  // if 'complete' never fires, letting the content script's own timeout produce diagnostics.
+  function waitForComplete(tabId: number, capMs = 15000): Promise<void> {
     return new Promise((resolve) => {
-      const listener = (id: number, info: chrome.tabs.TabChangeInfo) => {
-        if (id === tabId && info.status === 'complete') {
-          chrome.tabs.onUpdated.removeListener(listener);
-          setTimeout(resolve, 1500);
-        }
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        chrome.tabs.onUpdated.removeListener(listener);
+        clearTimeout(cap);
+        resolve();
       };
+      const listener = (id: number, info: chrome.tabs.TabChangeInfo) => {
+        if (id === tabId && info.status === 'complete') finish();
+      };
+      const cap = setTimeout(finish, capMs);
       chrome.tabs.onUpdated.addListener(listener);
     });
   }

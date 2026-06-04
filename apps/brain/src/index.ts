@@ -24,7 +24,7 @@ const store = new JobStore(db);
 const wss = new WebSocketServer({ port: config.port, path: '/ws' });
 const hands = new HandsServer({ wss, token: config.token, onResult: (r) => {
   dispatcher.handleResult(r);
-  console.log('[result]', r.jobId, r.status, JSON.stringify(r.data ?? {}));
+  console.log('[result]', r.jobId, r.status, JSON.stringify(r.data ?? {}), JSON.stringify(r.observed ?? {}));
 }});
 const dispatcher = new Dispatcher(store, (job) => hands.sendJob(job));
 
