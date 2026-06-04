@@ -18,6 +18,46 @@
 
 ---
 
+## ⚠️ RESUME / DISCOVERY UPDATE (2026-06-04) — READ THIS BEFORE EXECUTING TASKS 3–7
+
+**Where we are:** 5 of 12 tasks DONE on branch `feat/aura-m1` (whole suite green, 36 tests). Paused mid-discovery of the parsers (Tasks 3–6).
+
+**Done & committed on `feat/aura-m1`:**
+- Task 2 `oneText` — `d07f738`
+- Task 8 Drizzle migrations + `lead`/child schema (replaces inline DDL) — `d12ddb5`
+- Task 10 CSV export — `096b993`
+- Task 7-contract: `ScrapedProfile` + Experience/Education/Skill/Certification zod schemas — `2bcf22e`
+- Task 9 `LeadStore.upsertProfile` — `bebd89a`
+- Task 1 fixture captured + committed: `apps/extension/src/parse/__fixtures__/real-profile.html` (`<script>`/`<style>` stripped; 398 KB)
+
+**Remaining:** Tasks 3–6 (parsers), Task 7-compose (`scrapeProfile()`), Task 11 (wire the `scrapeProfile` job + popup render), Task 12 (live e2e + finish branch).
+
+### ‼️ The per-field selectors written in Tasks 3–6 below are INVALID — do not use them.
+Live inspection of the real fixture (2026-06) shows **LinkedIn has fully obfuscated the profile DOM**: every CSS class is now a hashed CSS-module name (`bc5245d7`, `_8f434462`, `dca846e8`…). **NONE** of these the plan/research assumed still exist: `text-heading-xlarge`, `text-body-medium`, `text-body-small`, `pvs-list`, the `#experience`/`#education`/`#skills` anchor ids, `data-view-name="profile-component-entity"`, `visually-hidden`. (`aria-hidden="true"` IS still present.)
+
+### The ONLY durable hooks (build parsers on these):
+1. **`<h2>` section-heading TEXT** — "Experience", "Education", "Skills (N)", "About" are real text. Section = `[...doc.querySelectorAll('h2,h3')].find(h => h.textContent.trim().startsWith('Experience'))` then `.closest('section')`.
+2. **`document.title`** = `"<Full Name> | LinkedIn"` — authoritative name (the name is also the `<h2>` whose text === the title-name).
+3. **`aria-hidden="true"` spans** for visible text (there is no `.visually-hidden` twin anymore).
+4. **Structural position** within the heading's section.
+
+### Verified structure (from the committed fixture — James Collard's profile):
+- **NAME:** `<h2>` whose text === the title-name. Most reliable source = `document.title` minus `" | LinkedIn"`. (The existing `wait.ts` title-fallback already does this.)
+- **ABOUT:** find `h2` "About" → `.closest('section')` → `.textContent`, strip the leading "About" and trailing "…see more"/"more". (Confirmed: yields "Software engineer focused on Salesforce ecosystems…".)
+- **EXPERIENCE:** `h2` "Experience" → `.closest('section')` → `querySelectorAll('li')` are the entries (2 found). Within each `li` the title / "MMM YYYY - Present · N mos" date line / description are concatenated rows — split structurally (read the li's text rows, first = title, the date-shaped row = dates, the longest = description). **Do NOT** read company URLs from `<a>` here: on a self-view fixture they are `…/edit/forms/…` edit links.
+- **EDUCATION:** `h2` "Education" → section → entries are **`<div>`s, not `<li>`** (e.g. "Waterfront UTC", "2022 – 2024"). Find the repeated entry container by structure (the smallest repeated ancestor of the school text).
+- **SKILLS:** the main profile shows only top skills; "Skills (25)" → the full list is on `/details/skills/` (**deferred to M2**). Best-effort: capture whatever skill names render on the main card.
+
+### Fixture caveat (important):
+The committed fixture is James's **OWN profile (self-view)** — it has edit chrome + extra sections ("Analytics", "Suggested for you", "Public profile & URL", "Ad Options") that **other people's profiles (the real scrape targets) do NOT have**. Heading-text-anchored parsers sidestep this. **Task 12 must scrape a real OTHER person's profile** to validate. (Optional: capture a connection's profile as a second fixture for more representative tests.)
+
+### Revised approach for Tasks 3–6:
+Rewrite each parser to be **heading-text-anchored + structural + `aria-hidden`-based** (never class-based). Develop iteratively against the committed fixture — a happy-dom inspection script (`import { Window } from 'happy-dom'; new Window().DOMParser…`, run via `pnpm --filter @aura/extension exec node <script.mjs>` placed *inside* apps/extension so happy-dom resolves) is the fast way to confirm selectors before writing each test. Always keep `lead.profileRaw` (the full `ScrapedProfile` JSON) as the safety net. **Realistic M1 target:** name, headline, location, about, experience entries, education entries. Skills full list, certifications, and companyUrl are best-effort / M2.
+
+**Reality note:** an obfuscated DOM makes selector scraping inherently fragile — expect to re-derive selectors against a fresh fixture every few weeks. This is the nature of LinkedIn scraping.
+
+---
+
 ## File Structure
 
 ```
