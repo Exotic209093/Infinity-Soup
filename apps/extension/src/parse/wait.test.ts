@@ -22,7 +22,8 @@ describe('waitForProfile', () => {
     const out = await promise;
     expect(out.loaded).toBe(true);
     expect(out.fullName).toBe('Ada Lovelace');
-    expect(out.diagnostics).toBeUndefined();
+    expect(out.source).toBe('dom');
+    expect(out.diagnostics).toBeDefined();
   });
 
   it('resolves immediately when the name is already present', async () => {
@@ -77,5 +78,18 @@ describe('waitForProfile', () => {
     expect(out.loaded).toBe(false);
     expect(out.diagnostics!.authWall).toBe(false);
     expect(out.diagnostics!.authWallSignals).toEqual([]);
+  });
+
+  it('falls back to the <title> name when the DOM has no usable <h1> (current LinkedIn)', async () => {
+    const doc = new DOMParser().parseFromString(
+      '<html><head><title>Ada Lovelace | LinkedIn</title></head><body><main><div>profile body, no h1</div></main></body></html>',
+      'text/html',
+    );
+    const out = await waitForProfile(doc, 150);
+    expect(out.loaded).toBe(true);
+    expect(out.fullName).toBe('Ada Lovelace');
+    expect(out.source).toBe('title');
+    expect(out.matchedSelector).toBe('title');
+    expect(out.diagnostics!.h1Count).toBe(0);
   });
 });

@@ -53,7 +53,7 @@ export default defineBackground(() => {
       return {
         jobId: job.id,
         status: c.loaded ? 'ok' : 'failed',
-        data: { loaded: c.loaded, fullName: c.fullName },
+        data: { loaded: c.loaded, fullName: c.fullName, source: c.source },
         observed: c.diagnostics,
       };
     } catch (err) {
