@@ -13,17 +13,23 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  */
 async function loadFullProfile(timeoutMs: number): Promise<void> {
   const start = Date.now();
-  let lastHeight = 0;
+  let y = 0;
+  // Step DOWN incrementally (not a jump to the bottom): each section must pass through the
+  // viewport for its intersection-observer to fire and lazy-render. Keep going until we've
+  // reached the bottom with the sections present, or we run out of time.
   while (Date.now() - start < timeoutMs) {
-    window.scrollTo(0, document.body.scrollHeight);
-    await sleep(500);
-    if (profileSectionsReady(document)) {
-      await sleep(900); // let the section entries finish rendering
-      break;
+    y += Math.round(window.innerHeight * 0.8);
+    window.scrollTo(0, y);
+    await sleep(450);
+    const atBottom = y >= document.body.scrollHeight - window.innerHeight;
+    if (atBottom) {
+      if (profileSectionsReady(document)) {
+        await sleep(900); // let the last section's entries finish rendering
+        break;
+      }
+      await sleep(450); // bottom reached but sections not in yet — give them a beat
+      y = document.body.scrollHeight; // re-anchor in case the page grew
     }
-    const h = document.body.scrollHeight;
-    if (h === lastHeight) await sleep(400); // page stopped growing; give it a beat
-    lastHeight = h;
   }
   window.scrollTo(0, 0);
   await sleep(200);
