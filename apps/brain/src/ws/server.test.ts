@@ -41,4 +41,32 @@ describe('HandsServer auth', () => {
     expect(closed).toBe(true);
     expect(srv!.hasHands()).toBe(false);
   });
+
+  it('ignores a malformed (non-JSON) frame without crashing', async () => {
+    const port = await startServer('secret');
+    const ws = connect(port);
+    const welcome = await new Promise<string>((resolve) => {
+      ws.on('open', () => {
+        ws.send('not json{');                                   // must be ignored, not crash
+        ws.send(JSON.stringify({ kind: 'hello', token: 'secret' }));
+      });
+      ws.on('message', (d) => resolve(JSON.parse(d.toString()).kind));
+    });
+    expect(welcome).toBe('welcome');
+    ws.close();
+  });
+
+  it('rejects a second hands connection while one is active', async () => {
+    const port = await startServer('secret');
+    const a = connect(port);
+    await new Promise<void>((resolve) => {
+      a.on('open', () => a.send(JSON.stringify({ kind: 'hello', token: 'secret' })));
+      a.on('message', () => resolve());   // first client welcomed
+    });
+    const b = connect(port);
+    const bClosed = await new Promise<boolean>((resolve) => b.on('close', () => resolve(true)));
+    expect(bClosed).toBe(true);
+    expect(srv!.hasHands()).toBe(true);    // first client is still the hands
+    a.close();
+  });
 });

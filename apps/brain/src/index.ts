@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { join } from 'node:path';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { WebSocketServer } from 'ws';
@@ -8,9 +9,10 @@ import { HandsServer } from './ws/server.js';
 import { Dispatcher } from './dispatcher.js';
 import { buildHttp } from './http.js';
 
-const config = loadConfig();
+const DATA_DIR = '.aura';
+const config = loadConfig(DATA_DIR);
 
-const sqlite = new Database('.aura/aura.sqlite');
+const sqlite = new Database(join(DATA_DIR, 'aura.sqlite'));
 sqlite.exec(`CREATE TABLE IF NOT EXISTS jobs (
   id TEXT PRIMARY KEY, type TEXT NOT NULL, target TEXT NOT NULL,
   payload TEXT NOT NULL DEFAULT '{}', status TEXT NOT NULL DEFAULT 'queued',

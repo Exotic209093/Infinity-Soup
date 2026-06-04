@@ -9,9 +9,10 @@ export class Dispatcher {
   constructor(private store: JobStore, private sendJob: SendJob, private now: Now = Date.now) {}
 
   enqueue(job: Job): void {
-    this.store.create(job, this.now());
+    const now = this.now();
+    this.store.create(job, now);
     const delivered = this.sendJob(job);
-    if (delivered) this.store.markDispatched(job.id, this.now());
+    if (delivered) this.store.markDispatched(job.id, now);
   }
 
   handleResult(result: Result): void {

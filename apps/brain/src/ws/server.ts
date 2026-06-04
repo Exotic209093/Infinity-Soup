@@ -14,9 +14,12 @@ export class HandsServer {
   }
 
   private onConnection(ws: WebSocket) {
+    if (this.hands !== null) { ws.close(1008, 'already connected'); return; }
     let authed = false;
     ws.on('message', (raw) => {
-      const parsed = ClientFrameSchema.safeParse(JSON.parse(raw.toString()));
+      let json: unknown;
+      try { json = JSON.parse(raw.toString()); } catch { return; }
+      const parsed = ClientFrameSchema.safeParse(json);
       if (!parsed.success) return;
       const frame = parsed.data;
       if (!authed) {
