@@ -29,3 +29,7 @@ Thumbs.db
 
 # AURA brain runtime dir — contains auth token (config.json) and local SQLite DB; never commit
 .aura/
+
+# WXT generated dir + build output
+.wxt/
+.output/
