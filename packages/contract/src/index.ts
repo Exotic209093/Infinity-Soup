@@ -32,3 +32,30 @@ export const ClientFrameSchema = z.union([ClientHelloSchema, ClientResultSchema]
 export const ServerFrameSchema = z.union([ServerWelcomeSchema, ServerJobSchema]);
 export type ClientFrame = z.infer<typeof ClientFrameSchema>;
 export type ServerFrame = z.infer<typeof ServerFrameSchema>;
+
+export const ExperienceSchema = z.object({
+  title: z.string(), company: z.string().default(''), employmentType: z.string().default(''),
+  startDate: z.string().default(''), endDate: z.string().default(''), isCurrent: z.boolean().default(false),
+  location: z.string().default(''), companyUrl: z.string().default(''), description: z.string().default(''),
+});
+export const EducationSchema = z.object({
+  school: z.string(), degree: z.string().default(''), field: z.string().default(''),
+  startYear: z.number().nullable().default(null), endYear: z.number().nullable().default(null),
+});
+export const SkillSchema = z.object({ name: z.string() });
+export const CertificationSchema = z.object({ name: z.string(), issuer: z.string().default(''), issuedDate: z.string().default('') });
+
+export const ScrapedProfileSchema = z.object({
+  profileUrl: z.string(),
+  fullName: z.string(),
+  headline: z.string().default(''),
+  location: z.string().default(''),
+  about: z.string().default(''),
+  currentCompany: z.string().default(''),
+  currentTitle: z.string().default(''),
+  experience: z.array(ExperienceSchema).default([]),
+  education: z.array(EducationSchema).default([]),
+  skills: z.array(SkillSchema).default([]),
+  certifications: z.array(CertificationSchema).default([]),
+});
+export type ScrapedProfile = z.infer<typeof ScrapedProfileSchema>;
