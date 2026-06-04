@@ -75,9 +75,12 @@ describe('waitForProfile', () => {
       'text/html',
     );
     const out = await waitForProfile(doc, 150);
-    expect(out.loaded).toBe(false);
+    // "Sign in" only in the nav chrome must NOT be flagged as an auth wall...
     expect(out.diagnostics!.authWall).toBe(false);
     expect(out.diagnostics!.authWallSignals).toEqual([]);
+    // ...and the title fallback still reads the real name, so the visit succeeds.
+    expect(out.loaded).toBe(true);
+    expect(out.source).toBe('title');
   });
 
   it('falls back to the <title> name when the DOM has no usable <h1> (current LinkedIn)', async () => {
