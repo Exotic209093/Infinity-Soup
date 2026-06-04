@@ -1,0 +1,11 @@
+{
+  "name": "@aura/contract",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": { "zod": "^3.23.0" }
+}
