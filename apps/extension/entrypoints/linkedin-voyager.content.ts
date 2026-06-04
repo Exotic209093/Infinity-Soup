@@ -14,18 +14,26 @@ import { VOYAGER_MSG, VOYAGER_REPLAY_REQUEST, type VoyagerEnvelope } from '../sr
  *
  * Also exposes window.__AURA_VOYAGER__ so a captured corpus can be grabbed manually for a
  * test fixture:  copy(JSON.stringify(window.__AURA_VOYAGER__))
+ *
+ * Safety (this runs on the user's real, logged-in session): postMessage is scoped to the
+ * page origin and replays only honour same-window requests (no PII broadcast to other
+ * frames); the in-memory buffer is byte-bounded so a long-lived tab cannot leak unboundedly.
  */
 export default defineContentScript({
   matches: ['https://www.linkedin.com/*'],
   runAt: 'document_start',
   world: 'MAIN',
   main() {
+    const ORIGIN = window.location.origin; // scope postMessage to the page; never '*'
+    const MAX_BYTES = 8 * 1024 * 1024; // bound the replay buffer on long-lived tabs
+
     const captured: VoyagerEnvelope[] = [];
+    let bufferedBytes = 0;
     (window as unknown as { __AURA_VOYAGER__?: VoyagerEnvelope[] }).__AURA_VOYAGER__ = captured;
 
     const emit = (env: VoyagerEnvelope) => {
       try {
-        window.postMessage({ source: VOYAGER_MSG, url: env.url, body: env.body }, '*');
+        window.postMessage({ source: VOYAGER_MSG, url: env.url, body: env.body }, ORIGIN);
       } catch {
         /* postMessage can throw on exotic payloads — never break the page */
       }
@@ -34,11 +42,18 @@ export default defineContentScript({
       if (!body) return;
       const env = { url, body };
       captured.push(env);
+      bufferedBytes += body.length;
+      while (captured.length > 1 && bufferedBytes > MAX_BYTES) {
+        const dropped = captured.shift();
+        if (dropped) bufferedBytes -= dropped.body.length;
+      }
       emit(env);
     };
 
-    // Replay everything captured before the ISOLATED side started listening.
+    // Replay everything captured before the ISOLATED side started listening. Only honour
+    // requests from THIS window at the page origin — ignore other frames/scripts.
     window.addEventListener('message', (e: MessageEvent) => {
+      if (e.source !== window || e.origin !== ORIGIN) return;
       if (e.data && (e.data as { source?: unknown }).source === VOYAGER_REPLAY_REQUEST) {
         for (const env of captured) emit(env);
       }
@@ -58,11 +73,16 @@ export default defineContentScript({
                   ? input.href
                   : (input as Request)?.url ?? '';
             if (isVoyagerUrl(url)) {
-              res
-                .clone()
-                .text()
-                .then((t) => post(url, t))
-                .catch(() => {});
+              // Only buffer text/JSON bodies (Voyager is JSON); skip binary so a matched
+              // streaming/binary response is never fully buffered by our clone.
+              const ct = res.headers.get('content-type') ?? '';
+              if (!ct || /json|text/i.test(ct)) {
+                res
+                  .clone()
+                  .text()
+                  .then((t) => post(url, t))
+                  .catch(() => {});
+              }
             }
           } catch {
             /* observation must never affect the page's fetch */
@@ -84,10 +104,15 @@ export default defineContentScript({
       this.addEventListener('load', () => {
         try {
           const url = (this as unknown as { __auraUrl?: string }).__auraUrl ?? '';
-          // responseText is only readable for '' | 'text' response types.
-          if (isVoyagerUrl(url) && (this.responseType === '' || this.responseType === 'text')) {
+          if (!isVoyagerUrl(url)) return;
+          const rt = this.responseType;
+          // responseText is only readable for '' | 'text'; for 'json' read the parsed object.
+          if (rt === '' || rt === 'text') {
             post(url, this.responseText);
+          } else if (rt === 'json' && this.response != null) {
+            post(url, JSON.stringify(this.response));
           }
+          // 'arraybuffer' | 'blob' | 'document' are not Voyager JSON — skip.
         } catch {
           /* never break the page */
         }
