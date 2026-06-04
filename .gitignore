@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build / dist output
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Env & secrets (Claude key, etc.) — never commit
+.env
+.env.*
+!.env.example
+
+# Local database
+*.sqlite
+*.sqlite-journal
+*.db
+
+# Brainstorm visual-companion artifacts (mockups, server state)
+.superpowers/
+
+# Logs
+*.log
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
