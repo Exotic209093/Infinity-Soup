@@ -40,9 +40,12 @@ export default defineBackground(() => {
     }
     let tabId: number | undefined;
     try {
-      // active:false (background tab) is fine — the content script waits via MutationObserver,
-      // which is immune to background timer throttling, so we never steal the user's focus.
-      const tab = await chrome.tabs.create({ url: job.target, active: false });
+      // active:true (visible tab): LinkedIn does NOT render the profile body (the name <h1>)
+      // in a hidden/background tab — evidence: a correct, readyState:'complete' profile page
+      // still reported h1Count:0 after a full 15s wait. A never-visible tab never commits the
+      // React-rendered profile. The tab is closed again in finally.
+      // M-later: a less intrusive renderer (unfocused window / offscreen) to avoid the focus flash.
+      const tab = await chrome.tabs.create({ url: job.target, active: true });
       if (tab.id == null) throw new Error('chrome.tabs.create returned a tab with no id');
       tabId = tab.id;
       await waitForComplete(tabId);
