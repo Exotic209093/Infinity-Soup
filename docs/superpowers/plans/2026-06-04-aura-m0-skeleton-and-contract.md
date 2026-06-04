@@ -1225,5 +1225,21 @@ git commit -m "feat(extension): MV3 shell (bg WS client + content reader + optio
 
 ---
 
+## M0 Build Notes — actual deltas (filled in during the build, 2026-06-04)
+
+Corrections discovered while executing the plan; carry these into M1.
+
+- **better-sqlite3:** the `^11.3.0` pin had no Node-24 prebuilt → source build failed (wanted the ClangCL toolset, which isn't installed). Bumped to **`^12.10.0`** — ships a Node-24 prebuilt, no compiler needed. Use 12.x going forward.
+- **WXT 0.20:** `wxt/sandbox` no longer exists. Import entrypoint helpers from **`wxt/utils/define-background`** and **`wxt/utils/define-content-script`**. Pinned `wxt ^0.20.26`, `happy-dom ^20.10.1`.
+- **Vite:** WXT 0.20.26's build needs **Vite 6** (its plugin uses the Vite-6 `filter` hook API); added `vite ^6.3.4` to the extension dev deps.
+- **@types/chrome:** added to the extension dev deps so the entrypoints typecheck.
+- **Manifest:** dropped the invalid `ws://127.0.0.1/*` host-permission (`ws` isn't a valid match-pattern scheme; SW→localhost WebSocket needs no host permission) and the unused `scripting` permission. Final perms: `["storage","tabs"]`.
+- **Intentionally deferred** from the §File-Structure diagram (NOT built in M0): `GET /jobs/:id` and `drizzle.config.ts` — migrations are M1; the smoke test reads SQLite directly.
+- **Brain code-review fixes** (`7ec6517`): guard WS `JSON.parse`, reject a 2nd hands client, single enqueue timestamp, derive db path from the config dir.
+- **Extension code-review fixes** (`b3e2679`): close visit tabs (no tab leak), `connect()` re-entrancy guard, send-on-closed-socket guard, `storage.onChanged` filtered to port/token.
+- **Status:** Tasks 1–10 code-complete; **23 unit tests green**; brain smoke-tested (HTTP→Dispatcher→SQLite); extension builds to a loadable `chrome-mv3/`. Remaining for M0 = the two manual steps: replace the stand-in fixture with a real LinkedIn profile + run the live e2e.
+
+---
+
 ## Next plan
 After M0 verifies, write `docs/superpowers/plans/<date>-aura-m1-leads.md`: `scrapeProfile`/`scrapeSearch` jobs, the rich `lead` + child tables (Drizzle migrations begin), the Leads dashboard table, and CSV export — using the real profile fixture captured here as the parser's test bed.
