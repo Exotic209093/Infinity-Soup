@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import Database from 'better-sqlite3';
+import fastifyStatic from '@fastify/static';
+import { toLeadSummary, toLeadDetail } from './leads-view.js';
+import { leadsToCsv } from './csv.js';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { WebSocketServer } from 'ws';
@@ -43,29 +47,24 @@ const dispatcher = new Dispatcher(store, (job) => hands.sendJob(job));
 const app = buildHttp({
   enqueue: (job) => dispatcher.enqueue(job),
   genId: () => randomUUID(),
-  // TODO: replace stubs once LeadStore gains listSummaries / getDetail / toCsv (Phase 1B)
-  listLeads: () => leadStore.all().map((r) => ({
-    id: r.id, fullName: r.fullName, currentTitle: r.currentTitle ?? '', currentCompany: r.currentCompany ?? '',
-    location: r.location ?? '', expCount: 0, eduCount: 0, skillCount: 0, updatedAt: r.updatedAt,
-  })),
-  getLead: (id) => {
-    const full = leadStore.getFull(id);
-    if (!full) return null;
-    const r = full.lead;
-    return {
-      id: r.id, fullName: r.fullName, headline: r.headline ?? '', location: r.location ?? '',
-      currentTitle: r.currentTitle ?? '', currentCompany: r.currentCompany ?? '',
-      about: r.about ?? '', profileUrl: r.profileUrl, updatedAt: r.updatedAt,
-      experience: [], education: [], skills: [],
-    };
-  },
-  leadsCsv: () => {
-    const rows = leadStore.all();
-    const header = 'id,fullName,currentTitle,currentCompany,location,updatedAt';
-    const lines = rows.map((r) => [r.id, r.fullName, r.currentTitle ?? '', r.currentCompany ?? '', r.location ?? '', r.updatedAt ?? ''].join(','));
-    return [header, ...lines].join('\n');
-  },
+  listLeads: () => leadStore.all().map((l) => toLeadSummary(leadStore.getFull(l.id)!)),
+  getLead: (id) => { const f = leadStore.getFull(id); return f ? toLeadDetail(f) : null; },
+  leadsCsv: () => leadsToCsv(leadStore.all().map((l) => ({
+    fullName: l.fullName, headline: l.headline, location: l.location,
+    currentCompany: l.currentCompany, currentTitle: l.currentTitle, profileUrl: l.profileUrl,
+  }))),
 });
+
+// Serve the built dashboard (if present) as a SPA at '/'. Built later by apps/dashboard.
+const dashDist = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'dashboard', 'dist');
+if (existsSync(dashDist)) {
+  await app.register(fastifyStatic, { root: dashDist });
+  app.setNotFoundHandler((req, reply) => {
+    if (req.url.startsWith('/leads') || req.url.startsWith('/jobs')) return reply.code(404).send({ error: 'not found' });
+    return reply.sendFile('index.html');
+  });
+}
+
 await app.listen({ port: config.port + 1, host: '127.0.0.1' });
 
 console.log(`AURA brain up.
