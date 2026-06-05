@@ -14,4 +14,8 @@ describe('leadsToCsv', () => {
     const csv = leadsToCsv([{ fullName: 'A "B" C', headline: '', location: '', currentCompany: '', currentTitle: '', profileUrl: '' }]);
     expect(csv.split('\n')[1]).toBe('"A ""B"" C",,,,,');
   });
+  it('neutralizes spreadsheet formula-injection (leading =/+/-/@)', () => {
+    const csv = leadsToCsv([{ fullName: '=1+1', headline: '+1', location: '-2', currentCompany: '@x', currentTitle: 'ok', profileUrl: 'u' }]);
+    expect(csv.split('\n')[1]).toBe(`"'=1+1","'+1","'-2","'@x",ok,u`);
+  });
 });
