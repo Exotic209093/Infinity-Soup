@@ -5,6 +5,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SettingStore } from './setting-store.js';
+import { loadGovernorConfig, DEFAULT_GOVERNOR_CONFIG } from '../engine/governor.js';
 
 function freshDb(): BetterSQLite3Database {
   const sqlite = new Database(':memory:'); sqlite.pragma('foreign_keys = ON');
@@ -26,5 +27,12 @@ describe('SettingStore', () => {
     expect(ss.get('x')).toBe('one');
     ss.set('x', 'two');           // must UPSERT, not throw on PK conflict
     expect(ss.get('x')).toBe('two');
+  });
+
+  it('loadGovernorConfig: defaults when unset, deep-merge override when set', () => {
+    expect(loadGovernorConfig(ss)).toEqual(DEFAULT_GOVERNOR_CONFIG);
+    ss.set('governor', JSON.stringify({ caps: { visit: 2 } }));
+    expect(loadGovernorConfig(ss).caps.visit).toBe(2);
+    expect(loadGovernorConfig(ss).caps.connect).toBe(DEFAULT_GOVERNOR_CONFIG.caps.connect); // merged, not replaced
   });
 });
