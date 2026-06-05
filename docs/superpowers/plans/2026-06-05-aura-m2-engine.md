@@ -1388,11 +1388,22 @@ git commit -m "test(brain): M2 engine end-to-end integration + verified note"
 ---
 
 ## Definition of Done
-- [ ] `pnpm -r test` green; `pnpm -r typecheck` clean.
-- [ ] New tables migrate cleanly on a fresh DB and on the existing `.aura/aura.sqlite` (0001 applies over 0000).
-- [ ] A seeded straight-line campaign (Visit → Wait → Visit → End) drives enrolled leads: the engine dispatches `visit` jobs **only** when the governor allows (caps + working-hours), dedupes already-acted targets, and advances each enrollment to `done` on success.
-- [ ] Governor enforces per-type daily caps, the working-hours window, and dedupe (unit-tested across in-hours / out-of-hours / weekend / over-cap / already-acted).
-- [ ] The 60s ticker is wired into the brain and Results route to `engine.onResult`.
+- [x] `pnpm -r test` green; `pnpm -r typecheck` clean.
+- [x] New tables migrate cleanly on a fresh DB and on the existing `.aura/aura.sqlite` (0001 applies over 0000).
+- [x] A seeded straight-line campaign (Visit → Wait → Visit → End) drives enrolled leads: the engine dispatches `visit` jobs **only** when the governor allows (caps + working-hours), and advances each enrollment to `done` on success.
+- [x] Governor enforces per-type daily caps + the working-hours window (unit-tested across in-hours / out-of-hours / weekend / over-cap / disabled-hours / invalid-window).
+- [x] The 60s ticker is wired into the brain, `engine.reconcile()` runs at startup, and Results route to `engine.onResult`.
+
+## Verified live + remediated (2026-06-05)
+Built subagent-driven (Tasks 1–10), then **adversarially reviewed** (16-agent workflow: 5 risk-dimension reviewers → adversarial verifiers). The review confirmed 11 findings clustering into 4 real bugs the TDD tests masked; all were **remediated** (commits 292fb76 / 8f36b8b / f08809c), suite now 55 brain tests green:
+1. **Dispatch reflects delivery** — `Dispatcher.enqueue` returns `delivered`; the engine only marks an enrollment `dispatched` when hands actually received the job, else it reschedules (`active`, +60s). Fixes permanent stranding when hands are offline (and the CLI-tick wedge). Confirmed live: a `campaign:tick` with no hands leaves enrollments `active`, not stranded.
+2. **Startup reconciliation** — `Engine.reconcile()` (run at boot) re-activates enrollments left `dispatched` by a prior run (lost in-flight Result), bounded by `MAX_ATTEMPTS`.
+3. **Dedupe scoped out of the per-action path** — the global `(type,target)` dedupe silently dropped legitimately-repeated actions (broke the Visit→Wait→Visit warm-up in production). Removed from the Governor; within-enrollment idempotency is provided by the state machine. The `'skip'` decision is retained (reserved for future enrollment-level dedupe).
+4. **Caps count only sent actions** (`status IN ('dispatched','ok')`) — `failed`/`skipped` no longer burn cap slots; **invalid working-hours config** (empty days / start≥end) now disables hours instead of looping.
+
+Live CLI smoke (disposable copy of the real DB with James + Josh): `campaign:seed examples/visit-warmup.json` → `enroll` → `campaign:tick` → `campaign:status` shows enrollments advancing correctly.
+
+**Known limitations (deferred to M3/M4, consistent with spec §9):** `reconcile()` re-dispatch could double-act if a delivered action succeeded just before a crash (only `visit` actually executes in M2, so harmless now; proper per-node idempotency + the circuit breaker are M4); undelivered `queued` jobs accumulate one-per-retry while hands are offline (harmless, excluded from caps); cross-campaign person-level dedupe belongs at enrollment time (deferred).
 
 ## Deferred (later milestones — do NOT build here)
 - **M3:** real branch evaluation on edge conditions (`accepted`/`replied`/`timeout`); the visual node/edge canvas editor; AI personalization (Claude) at dispatch time with live preview; reply-sweep / stop-on-reply.
