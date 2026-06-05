@@ -8,6 +8,7 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "enqueue": "tsx src/enqueue.ts",
+    "leads": "tsx src/list-leads.ts",
     "export-leads": "tsx src/export-leads.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
