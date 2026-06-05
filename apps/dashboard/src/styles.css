@@ -207,18 +207,6 @@ table.leads .muted {
   margin-right: 3px;
 }
 
-/* ── Scrollable table wrapper ── */
-.leads-scroll {
-  width: 54%;
-  flex-shrink: 0;
-  overflow-y: auto;
-  border-right: 1px solid #e2e8f0;
-}
-
-.leads-scroll table.leads {
-  width: 100%;
-}
-
 /* ── Detail drawer ── */
 .drawer {
   flex: 1;
