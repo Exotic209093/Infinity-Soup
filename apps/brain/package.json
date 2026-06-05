@@ -11,7 +11,11 @@
     "leads": "tsx src/list-leads.ts",
     "export-leads": "tsx src/export-leads.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "campaign:seed": "tsx src/campaign-seed.ts",
+    "enroll": "tsx src/enroll.ts",
+    "campaign:tick": "tsx src/campaign-tick.ts",
+    "campaign:status": "tsx src/campaign-status.ts"
   },
   "dependencies": {
     "@aura/contract": "workspace:*",

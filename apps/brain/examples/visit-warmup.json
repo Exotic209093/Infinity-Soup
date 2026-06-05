@@ -1,0 +1,14 @@
+{
+  "name": "Visit warm-up",
+  "nodes": [
+    { "key": "v1", "type": "visit", "config": {} },
+    { "key": "w1", "type": "wait", "config": { "waitMs": 60000 } },
+    { "key": "v2", "type": "visit", "config": {} },
+    { "key": "end", "type": "end", "config": {} }
+  ],
+  "edges": [
+    { "from": "v1", "to": "w1" },
+    { "from": "w1", "to": "v2" },
+    { "from": "v2", "to": "end" }
+  ]
+}
