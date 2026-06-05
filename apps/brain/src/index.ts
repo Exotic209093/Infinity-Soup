@@ -58,6 +58,7 @@ const hands = new HandsServer({ wss, token: config.token, onResult: (r) => {
 const dispatcher = new Dispatcher(store, (job) => hands.sendJob(job));
 const governor = new Governor(store, loadGovernorConfig(settingStore));
 engine = new Engine(campaignStore, enrollmentStore, leadStore, governor, dispatcher, () => randomUUID());
+engine.reconcile(Date.now()); // recover any enrollments left 'dispatched' by a prior run
 
 const app = buildHttp({
   enqueue: (job) => dispatcher.enqueue(job),

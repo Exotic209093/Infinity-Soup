@@ -35,6 +35,11 @@ export class EnrollmentStore {
     return this.db.select().from(enrollment).where(eq(enrollment.pendingJobId, jobId)).get();
   }
 
+  /** All enrollments currently parked in the 'dispatched' state (awaiting a Result). */
+  dispatched(): EnrollmentRow[] {
+    return this.db.select().from(enrollment).where(eq(enrollment.state, 'dispatched')).all();
+  }
+
   markDispatched(id: string, jobId: string, now: number): void {
     this.set(id, { state: 'dispatched', pendingJobId: jobId, nextRunAt: null }, now);
   }

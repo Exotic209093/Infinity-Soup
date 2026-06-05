@@ -12,7 +12,7 @@ describe('Dispatcher', () => {
     const send = vi.fn().mockReturnValue(true);
     const d = new Dispatcher(store as any, send, () => 1000);
     const job: Job = { id: 'j1', type: 'visit', target: 'x', payload: {} };
-    d.enqueue(job);
+    expect(d.enqueue(job)).toBe(true);
     expect(store.create).toHaveBeenCalledWith(job, 1000);
     expect(store.markDispatched).toHaveBeenCalledWith('j1', 1000);
     expect(send).toHaveBeenCalledWith(job);
@@ -22,7 +22,7 @@ describe('Dispatcher', () => {
     const store = fakeStore();
     const send = vi.fn().mockReturnValue(false);
     const d = new Dispatcher(store as any, send, () => 1000);
-    d.enqueue({ id: 'j1', type: 'visit', target: 'x', payload: {} });
+    expect(d.enqueue({ id: 'j1', type: 'visit', target: 'x', payload: {} })).toBe(false);
     expect(store.create).toHaveBeenCalled();
     expect(store.markDispatched).not.toHaveBeenCalled();
   });

@@ -94,15 +94,42 @@ describe('Engine', () => {
     expect(e.state).toBe('active'); expect(e.nextRunAt!).toBeGreaterThan(0);
   });
 
-  it('governor skip (already acted) advances without dispatching', () => {
+  it('advances without dispatching when the governor returns skip', () => {
     const h = harness();
-    h.jobsStore.create({ id: 'old', type: 'visit', target: 'u1', payload: {} }, 0);
-    h.jobsStore.saveResult({ jobId: 'old', status: 'ok' }, 0);
+    const skipGov = { canDispatch: () => ({ kind: 'skip', reason: 'stub' }) } as unknown as Governor;
+    const engine2 = new Engine(h.campaigns, h.enrollments, h.leads, skipGov, h.dispatcher, () => 'jobX', () => 0);
     const g = seedLinear(h);
     const eid = h.enrollments.enroll(g.cid, 'l1', g.n1, 0);
-    h.engine.tick(0);
+    engine2.tick(0);
     expect(h.sent).toHaveLength(0);
-    expect(h.enrollments.get(eid)).toMatchObject({ currentNodeId: g.n2 });
+    expect(h.enrollments.get(eid)).toMatchObject({ currentNodeId: g.n2 }); // advanced past the action node
+  });
+
+  it('does NOT dispatch (stays active) when hands are offline; retries next tick', () => {
+    const h = harness();
+    // rebuild engine with an offline dispatcher over the same stores
+    const offline = new Dispatcher(h.jobsStore, () => false, () => 0);
+    const engine2 = new Engine(h.campaigns, h.enrollments, h.leads, h.governor, offline, () => 'jobX', () => 0);
+    const g = seedLinear(h);
+    const eid = h.enrollments.enroll(g.cid, 'l1', g.n1, 0);
+    engine2.tick(0);
+    const e = h.enrollments.get(eid)!;
+    expect(e.state).toBe('active');            // NOT 'dispatched'
+    expect(e.pendingJobId).toBeNull();
+    expect(e.nextRunAt).toBe(60000);           // rescheduled now+DELIVERY_RETRY_MS
+  });
+
+  it('reconcile re-activates a dispatched enrollment (and fails it after MAX_ATTEMPTS)', () => {
+    const h = harness(); const g = seedLinear(h);
+    const eid = h.enrollments.enroll(g.cid, 'l1', g.n1, 0);
+    h.engine.tick(0);                                   // delivered → state 'dispatched'
+    expect(h.enrollments.get(eid)!.state).toBe('dispatched');
+    h.engine.reconcile(0);                              // attempt 1 → back to active
+    expect(h.enrollments.get(eid)).toMatchObject({ state: 'active', attempts: 1, nextRunAt: 0 });
+    // drive to the attempt ceiling
+    h.engine.tick(0); h.engine.reconcile(0);            // attempt 2
+    h.engine.tick(0); h.engine.reconcile(0);            // attempt 3 == MAX → failed
+    expect(h.enrollments.get(eid)!.state).toBe('failed');
   });
 
   it('failed Result retries up to 3 attempts then fails', () => {

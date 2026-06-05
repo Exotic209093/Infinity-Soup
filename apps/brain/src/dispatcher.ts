@@ -8,11 +8,13 @@ export type Now = () => number;
 export class Dispatcher {
   constructor(private store: JobStore, private sendJob: SendJob, private now: Now = Date.now) {}
 
-  enqueue(job: Job): void {
+  /** Persist + try to deliver the job to hands. Returns true iff a hands client received it. */
+  enqueue(job: Job): boolean {
     const now = this.now();
     this.store.create(job, now);
     const delivered = this.sendJob(job);
     if (delivered) this.store.markDispatched(job.id, now);
+    return delivered;
   }
 
   handleResult(result: Result): void {

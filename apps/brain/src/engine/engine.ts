@@ -9,6 +9,7 @@ import { isActionNode, jobPayload, outcomeFor, waitMs } from './payload.js';
 
 type Now = () => number;
 const RETRY_BACKOFF_MS = 5 * 60 * 1000;
+const DELIVERY_RETRY_MS = 60 * 1000;
 const MAX_ATTEMPTS = 3;
 
 export class Engine {
@@ -45,8 +46,13 @@ export class Engine {
     if (decision.kind === 'defer') return this.enrollments.reschedule(e.id, decision.nextEligibleAt, now);
 
     const job: Job = { id: this.genId(), type: node.type as JobType, target: lead.profileUrl, payload: jobPayload(node) };
-    this.enrollments.markDispatched(e.id, job.id, now);
-    this.dispatcher.enqueue(job);
+    const delivered = this.dispatcher.enqueue(job);
+    if (delivered) {
+      this.enrollments.markDispatched(e.id, job.id, now);
+    } else {
+      // Hands offline — leave the enrollment 'active' and retry on a later tick when hands reconnect.
+      this.enrollments.reschedule(e.id, now + DELIVERY_RETRY_MS, now);
+    }
   }
 
   /** Hands Result for a dispatched enrollment. */
@@ -68,6 +74,18 @@ export class Engine {
     const attempts = e.attempts + 1;
     if (attempts < MAX_ATTEMPTS) this.enrollments.retry(e.id, attempts, now + RETRY_BACKOFF_MS, now);
     else this.enrollments.finish(e.id, 'failed', now);
+  }
+
+  /**
+   * Startup recovery: any enrollment left 'dispatched' has an unrecoverable in-flight Result
+   * (the hands socket is gone after a restart). Re-activate it for re-dispatch, bounded by MAX_ATTEMPTS.
+   */
+  reconcile(now = this.now()): void {
+    for (const e of this.enrollments.dispatched()) {
+      const attempts = e.attempts + 1;
+      if (attempts < MAX_ATTEMPTS) this.enrollments.retry(e.id, attempts, now, now); // re-run same node now
+      else this.enrollments.finish(e.id, 'failed', now);
+    }
   }
 
   /** Follow the outgoing edge for `condition` and schedule the next node. */

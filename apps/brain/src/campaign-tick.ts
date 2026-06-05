@@ -21,7 +21,7 @@ const jobs = new JobStore(db);
 const engine = new Engine(
   new CampaignStore(db), new EnrollmentStore(db), new LeadStore(db),
   new Governor(jobs, loadGovernorConfig(new SettingStore(db))),
-  new Dispatcher(jobs, () => false), // CLI tick has no live hands → jobs persist as 'queued' for inspection
+  new Dispatcher(jobs, () => false), // CLI has no live hands → enqueue returns false, the engine reschedules the enrollment (no dispatch, no stranding)
   () => randomUUID(),
 );
 engine.tick(Date.now());
