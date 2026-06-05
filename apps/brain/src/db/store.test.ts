@@ -39,4 +39,28 @@ describe('JobStore', () => {
     expect(j.completedAt).toBe(3000);
     expect(JSON.parse(j.result!).data.fullName).toBe('Jane Doe');
   });
+
+  it('countByTypeSince counts sent (non-queued) jobs of a type at/after a timestamp', () => {
+    const store = freshStore();
+    store.create({ id: 'j1', type: 'visit', target: 'u1', payload: {} }, 1000);
+    store.markDispatched('j1', 1000);
+    store.create({ id: 'j2', type: 'visit', target: 'u2', payload: {} }, 2000);
+    store.markDispatched('j2', 2000);
+    store.create({ id: 'j3', type: 'connect', target: 'u3', payload: {} }, 2000);
+    store.markDispatched('j3', 2000);
+    store.create({ id: 'j4', type: 'visit', target: 'u4', payload: {} }, 3000); // left 'queued'
+    expect(store.countByTypeSince('visit', 1500)).toBe(1); // only j2 (j1 before window, j4 still queued)
+    expect(store.countByTypeSince('visit', 500)).toBe(2);  // j1 + j2 (j4 queued, excluded)
+    expect(store.countByTypeSince('connect', 0)).toBe(1);
+  });
+
+  it('hasSucceeded is true only after an ok result for that type+target', () => {
+    const store = freshStore();
+    store.create({ id: 'j1', type: 'visit', target: 'u1', payload: {} }, 1);
+    expect(store.hasSucceeded('visit', 'u1')).toBe(false);
+    store.saveResult({ jobId: 'j1', status: 'ok' }, 2);
+    expect(store.hasSucceeded('visit', 'u1')).toBe(true);
+    expect(store.hasSucceeded('visit', 'other')).toBe(false);
+    expect(store.hasSucceeded('connect', 'u1')).toBe(false);
+  });
 });
