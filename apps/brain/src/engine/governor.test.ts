@@ -2,9 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Governor, DEFAULT_GOVERNOR_CONFIG, type GovernorConfig } from './governor.js';
 
 class FakeJobs {
-  succeeded = new Set<string>();           // `${type} ${target}`
   counts: Record<string, number> = {};
-  hasSucceeded(type: string, target: string) { return this.succeeded.has(`${type} ${target}`); }
   countByTypeSince(type: string, _since: number) { return this.counts[type] ?? 0; }
 }
 
@@ -19,12 +17,8 @@ function gov(cfg: GovernorConfig = DEFAULT_GOVERNOR_CONFIG, jobs = new FakeJobs(
 }
 
 describe('Governor', () => {
-  it('allows when in-hours, under cap, not deduped', () => {
+  it('allows when in-hours, under cap', () => {
     expect(gov().g.canDispatch('visit', 'u1', monday10)).toEqual({ kind: 'allow' });
-  });
-  it('skips when already acted (dedupe)', () => {
-    const { g, jobs } = gov(); jobs.succeeded.add('visit u1');
-    expect(g.canDispatch('visit', 'u1', monday10)).toMatchObject({ kind: 'skip' });
   });
   it('defers before working hours to 8am same day', () => {
     const d = gov().g.canDispatch('visit', 'u1', monday2am);

@@ -14,19 +14,22 @@ export function loadGovernorConfig(settings: SettingStore): GovernorConfig {
   if (!raw) return DEFAULT_GOVERNOR_CONFIG;
   let parsed: Partial<GovernorConfig> = {};
   try { parsed = JSON.parse(raw); } catch { return DEFAULT_GOVERNOR_CONFIG; }
+  const workingHours = { ...DEFAULT_GOVERNOR_CONFIG.workingHours, ...(parsed.workingHours ?? {}) };
+  const invalidWindow = !Array.isArray(workingHours.days) || workingHours.days.length === 0 || workingHours.startHour >= workingHours.endHour;
+  if (invalidWindow) workingHours.enabled = false; // a window that can never open must not gate dispatch
   return {
     caps: { ...DEFAULT_GOVERNOR_CONFIG.caps, ...(parsed.caps ?? {}) },
-    workingHours: { ...DEFAULT_GOVERNOR_CONFIG.workingHours, ...(parsed.workingHours ?? {}) },
+    workingHours,
   };
 }
 
+// 'skip' is currently unused (reserved for future enrollment-level dedupe).
 export type GovernorDecision =
   | { kind: 'allow' }
   | { kind: 'defer'; nextEligibleAt: number; reason: string }
   | { kind: 'skip'; reason: string };
 
 interface JobCounts {
-  hasSucceeded(type: string, target: string): boolean;
   countByTypeSince(type: string, since: number): number;
 }
 
@@ -34,16 +37,13 @@ export class Governor {
   constructor(private jobs: JobCounts, private config: GovernorConfig) {}
 
   canDispatch(action: string, target: string, now: number): GovernorDecision {
-    // 1. Dedupe — never act twice on a person for the same action.
-    if (this.jobs.hasSucceeded(action, target)) return { kind: 'skip', reason: 'already acted' };
-
-    // 2. Working hours — defer to the next open window.
+    // 1. Working hours — defer to the next open window.
     const wh = this.config.workingHours;
     if (wh.enabled && !withinHours(now, wh)) {
       return { kind: 'defer', nextEligibleAt: nextWindowOpen(now, wh), reason: 'outside working hours' };
     }
 
-    // 3. Daily cap — defer to the next day's window open.
+    // 2. Daily cap — defer to the next day's window open.
     const cap = this.config.caps[action] ?? Infinity;
     const used = this.jobs.countByTypeSince(action, startOfDay(now));
     if (used >= cap) {
