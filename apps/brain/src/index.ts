@@ -12,8 +12,14 @@ import { WebSocketServer } from 'ws';
 import { loadConfig } from './config.js';
 import { JobStore } from './db/store.js';
 import { LeadStore } from './db/lead-store.js';
+import { CampaignStore } from './db/campaign-store.js';
+import { EnrollmentStore } from './db/enrollment-store.js';
+import { SettingStore } from './db/setting-store.js';
+import { ensureAccount } from './db/account.js';
 import { HandsServer } from './ws/server.js';
 import { Dispatcher } from './dispatcher.js';
+import { Governor, loadGovernorConfig } from './engine/governor.js';
+import { Engine } from './engine/engine.js';
 import { buildHttp } from './http.js';
 import { ScrapedProfileSchema } from '@aura/contract';
 
@@ -26,6 +32,12 @@ const db = drizzle(sqlite);
 migrate(db, { migrationsFolder: join(dirname(fileURLToPath(import.meta.url)), '..', 'drizzle') }); // src/ -> apps/brain/drizzle
 const store = new JobStore(db);
 const leadStore = new LeadStore(db);
+const campaignStore = new CampaignStore(db);
+const enrollmentStore = new EnrollmentStore(db);
+const settingStore = new SettingStore(db);
+ensureAccount(db, Date.now());
+
+let engine: Engine; // assigned after `dispatcher` below; referenced by hands.onResult (runtime only)
 
 const wss = new WebSocketServer({ port: config.port, path: '/ws' });
 const hands = new HandsServer({ wss, token: config.token, onResult: (r) => {
@@ -41,8 +53,11 @@ const hands = new HandsServer({ wss, token: config.token, onResult: (r) => {
       console.warn('[lead] invalid ScrapedProfile:', parsed.error.issues[0]);
     }
   }
+  engine.onResult(r); // M2: advance any enrollment waiting on this job
 }});
 const dispatcher = new Dispatcher(store, (job) => hands.sendJob(job));
+const governor = new Governor(store, loadGovernorConfig(settingStore));
+engine = new Engine(campaignStore, enrollmentStore, leadStore, governor, dispatcher, () => randomUUID());
 
 const app = buildHttp({
   enqueue: (job) => dispatcher.enqueue(job),
@@ -67,8 +82,14 @@ if (existsSync(dashDist)) {
 
 await app.listen({ port: config.port + 1, host: '127.0.0.1' });
 
+const ticker = setInterval(() => {
+  try { engine.tick(Date.now()); } catch (err) { console.error('[engine] tick error', err); }
+}, 60_000);
+void ticker;
+
 console.log(`AURA brain up.
   WS  (hands):  ws://127.0.0.1:${config.port}/ws
   HTTP (api):   http://127.0.0.1:${config.port + 1}
   TOKEN:        ${config.token}
+  ENGINE:       ticking every 60s (campaigns + governor active)
 Paste the token + WS port into the extension options.`);
