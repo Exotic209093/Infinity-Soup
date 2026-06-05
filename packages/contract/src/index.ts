@@ -59,3 +59,21 @@ export const ScrapedProfileSchema = z.object({
   certifications: z.array(CertificationSchema).default([]),
 });
 export type ScrapedProfile = z.infer<typeof ScrapedProfileSchema>;
+
+export const ExperienceViewSchema = z.object({ title: z.string(), company: z.string(), dates: z.string(), isCurrent: z.boolean() });
+export const EducationViewSchema = z.object({ school: z.string(), years: z.string() });
+
+export const LeadSummarySchema = z.object({
+  id: z.string(), fullName: z.string(), currentTitle: z.string(), currentCompany: z.string(),
+  location: z.string(), expCount: z.number(), eduCount: z.number(), skillCount: z.number(),
+  updatedAt: z.number().nullable(),
+});
+export type LeadSummary = z.infer<typeof LeadSummarySchema>;
+
+export const LeadDetailSchema = z.object({
+  id: z.string(), fullName: z.string(), headline: z.string(), location: z.string(),
+  currentTitle: z.string(), currentCompany: z.string(), about: z.string(), profileUrl: z.string(),
+  updatedAt: z.number().nullable(),
+  experience: z.array(ExperienceViewSchema), education: z.array(EducationViewSchema), skills: z.array(z.string()),
+});
+export type LeadDetail = z.infer<typeof LeadDetailSchema>;
