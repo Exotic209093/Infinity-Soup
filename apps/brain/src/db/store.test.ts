@@ -54,6 +54,15 @@ describe('JobStore', () => {
     expect(store.countByTypeSince('connect', 0)).toBe(1);
   });
 
+  it('countByTypeSince counts only dispatched/ok, excluding failed + skipped', () => {
+    const store = freshStore();
+    store.create({ id: 'f1', type: 'visit', target: 'u1', payload: {} }, 1000); store.saveResult({ jobId: 'f1', status: 'failed' }, 1000);
+    store.create({ id: 's1', type: 'visit', target: 'u2', payload: {} }, 1000); store.saveResult({ jobId: 's1', status: 'skipped' }, 1000);
+    store.create({ id: 'd1', type: 'visit', target: 'u3', payload: {} }, 1000); store.markDispatched('d1', 1000);
+    store.create({ id: 'o1', type: 'visit', target: 'u4', payload: {} }, 1000); store.markDispatched('o1', 1000); store.saveResult({ jobId: 'o1', status: 'ok' }, 1000);
+    expect(store.countByTypeSince('visit', 0)).toBe(2); // d1 (dispatched) + o1 (ok); f1/s1 excluded
+  });
+
   it('hasSucceeded is true only after an ok result for that type+target', () => {
     const store = freshStore();
     store.create({ id: 'j1', type: 'visit', target: 'u1', payload: {} }, 1);

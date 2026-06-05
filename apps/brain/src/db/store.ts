@@ -1,4 +1,4 @@
-import { and, eq, gte, ne, count } from 'drizzle-orm';
+import { and, eq, gte, inArray, count } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Job, Result } from '@aura/contract';
 import { jobs, type JobRow } from './schema.js';
@@ -27,10 +27,10 @@ export class JobStore {
     return this.db.select().from(jobs).where(eq(jobs.id, id)).get();
   }
 
-  /** Count jobs of a type that were actually sent (status != 'queued') with createdAt >= since. Used for daily caps. */
+  /** Count jobs of a type actually sent to hands ('dispatched') or confirmed ('ok') since `since`. Used for daily caps. */
   countByTypeSince(type: string, since: number): number {
     const row = this.db.select({ n: count() }).from(jobs)
-      .where(and(eq(jobs.type, type), gte(jobs.createdAt, since), ne(jobs.status, 'queued'))).get();
+      .where(and(eq(jobs.type, type), gte(jobs.createdAt, since), inArray(jobs.status, ['dispatched', 'ok']))).get();
     return row?.n ?? 0;
   }
 

@@ -35,4 +35,11 @@ describe('SettingStore', () => {
     expect(loadGovernorConfig(ss).caps.visit).toBe(2);
     expect(loadGovernorConfig(ss).caps.connect).toBe(DEFAULT_GOVERNOR_CONFIG.caps.connect); // merged, not replaced
   });
+
+  it('loadGovernorConfig disables hours when the window is invalid (empty days or start>=end)', () => {
+    ss.set('governor', JSON.stringify({ workingHours: { enabled: true, days: [] } }));
+    expect(loadGovernorConfig(ss).workingHours.enabled).toBe(false);
+    ss.set('governor', JSON.stringify({ workingHours: { enabled: true, startHour: 18, endHour: 8 } }));
+    expect(loadGovernorConfig(ss).workingHours.enabled).toBe(false);
+  });
 });
