@@ -564,9 +564,14 @@ Run `pnpm -r test` (all green) + `pnpm -r typecheck`. Append a one-line "dashboa
 ---
 
 ## Definition of Done
-- [ ] `pnpm -r test` green; `pnpm -r typecheck` clean.
-- [ ] `GET /leads` / `/leads/:id` / `/leads.csv` serve real lead data.
-- [ ] Dashboard renders the leads table + detail drawer + search + CSV export against the live brain (dev proxy AND brain-served build).
+- [x] `pnpm -r test` green; `pnpm -r typecheck` clean.
+- [x] `GET /leads` / `/leads/:id` / `/leads.csv` serve real lead data.
+- [x] Dashboard renders the leads table + detail drawer + search + CSV export against the live brain (dev proxy AND brain-served build).
+
+## Verified live (2026-06-05)
+Dashboard verified live end-to-end. Ran the brain against the real M1 DB (James Collard + Josh Dolby) and drove the brain-served production build (`http://127.0.0.1:<httpPort>/`) with Playwright: the leads table lists both people with `N exp / N edu / N skills` chips; the drawer auto-selects the first lead and updates on row-click (full About/Experience/Education/Skills, dates formatted e.g. "May 2026 – Present"); the search box filters by name/company; `GET /leads.csv` returns `text/csv` with a `content-disposition` attachment; `GET /leads/<unknown>` → 404. `pnpm -r test` (contract+dashboard+brain+extension) and `pnpm -r typecheck` both green. (Verification used an isolated copy of the DB on alternate ports so as not to disturb a separately-running brain instance.)
+
+Known follow-up (out of scope here, an M1 scrape-data artifact): the "Freelance" experience stored its company as the literal string `"None"`, so the drawer shows "Freelance · None".
 
 ## Deferred (later)
 - Overview tab (caps/safety/activity — spec §7), Campaigns, Sequences (branching canvas) tabs.
