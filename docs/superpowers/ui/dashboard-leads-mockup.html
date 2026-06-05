@@ -1,0 +1,106 @@
+<h2>AURA Dashboard — Leads view</h2>
+<p class="subtitle">The demo centerpiece, built on the profiles we already scraped. Does this structure feel right? Click to approve, or tell me what to add/change in the terminal.</p>
+
+<style>
+  .aura-shell { display:flex; min-height:560px; border-radius:10px; overflow:hidden; border:1px solid #e2e8f0; font-family:-apple-system,Segoe UI,Roboto,sans-serif; box-shadow:0 8px 30px rgba(2,6,23,.12); }
+  .aura-side { width:190px; background:#0b1220; color:#94a3b8; display:flex; flex-direction:column; padding:16px 0; }
+  .aura-logo { font-weight:800; font-size:18px; color:#fff; letter-spacing:.5px; padding:0 18px 4px; }
+  .aura-logo small { color:#38bdf8; }
+  .aura-pill { margin:6px 18px 14px; font-size:11px; color:#34d399; background:#06281f; border:1px solid #134e3a; border-radius:999px; padding:4px 9px; display:inline-block; width:max-content; }
+  .aura-nav a { display:block; padding:9px 18px; font-size:14px; color:#94a3b8; text-decoration:none; border-left:3px solid transparent; }
+  .aura-nav a.active { color:#fff; background:#111c30; border-left-color:#38bdf8; font-weight:600; }
+  .aura-main { flex:1; background:#f8fafc; display:flex; flex-direction:column; }
+  .aura-top { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid #e2e8f0; background:#fff; }
+  .aura-top h3 { margin:0; font-size:16px; color:#0f172a; }
+  .aura-top .tools { display:flex; gap:8px; }
+  .aura-input { border:1px solid #cbd5e1; border-radius:7px; padding:6px 10px; font-size:13px; width:180px; color:#475569; background:#fff; }
+  .aura-btn { background:#0ea5e9; color:#fff; border:none; border-radius:7px; padding:6px 12px; font-size:13px; font-weight:600; }
+  .aura-body { display:flex; flex:1; min-height:0; }
+  table.leads { width:54%; border-collapse:collapse; font-size:13px; }
+  table.leads th { text-align:left; color:#64748b; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.4px; padding:10px 14px; border-bottom:1px solid #e2e8f0; }
+  table.leads td { padding:11px 14px; border-bottom:1px solid #eef2f7; color:#334155; }
+  table.leads tr.sel { background:#eff6ff; }
+  table.leads .nm { font-weight:600; color:#0f172a; }
+  .chips span { display:inline-block; font-size:11px; background:#f1f5f9; color:#475569; border-radius:6px; padding:2px 6px; margin-right:3px; }
+  .drawer { flex:1; background:#fff; border-left:1px solid #e2e8f0; padding:16px 18px; overflow:auto; }
+  .drawer h4 { margin:0 0 2px; font-size:17px; color:#0f172a; }
+  .drawer .sub { color:#475569; font-size:13px; margin-bottom:2px; }
+  .drawer .loc { color:#94a3b8; font-size:12px; margin-bottom:14px; }
+  .drawer .lbl { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:#0ea5e9; font-weight:700; margin:14px 0 6px; }
+  .drawer .row { font-size:13px; color:#334155; padding:5px 0; border-bottom:1px dashed #eef2f7; }
+  .drawer .row b { color:#0f172a; }
+  .drawer .muted { color:#94a3b8; }
+</style>
+
+<div class="mockup">
+  <div class="mockup-header">Preview &nbsp;·&nbsp; localhost:51900 &nbsp;·&nbsp; AURA Dashboard (React, served by the brain)</div>
+  <div class="mockup-body" style="padding:0">
+    <div class="aura-shell">
+      <div class="aura-side">
+        <div class="aura-logo">◆ AURA</div>
+        <div class="aura-pill">● Brain connected · idle</div>
+        <nav class="aura-nav">
+          <a>Overview</a>
+          <a class="active">Leads</a>
+          <a>Campaigns</a>
+          <a>Sequences</a>
+          <a>Settings</a>
+        </nav>
+      </div>
+      <div class="aura-main">
+        <div class="aura-top">
+          <h3>Leads · 2</h3>
+          <div class="tools">
+            <input class="aura-input" placeholder="Search name, company…">
+            <button class="aura-btn">Export CSV</button>
+          </div>
+        </div>
+        <div class="aura-body">
+          <table class="leads">
+            <thead><tr><th>Name</th><th>Company</th><th>Location</th><th>Sections</th></tr></thead>
+            <tbody>
+              <tr class="sel">
+                <td><div class="nm">James Collard</div><div class="muted" style="font-size:11px">Solutions Engineer</div></td>
+                <td>Apex Infinity Solutions</td>
+                <td>Chatham, UK</td>
+                <td class="chips"><span>5 exp</span><span>1 edu</span><span>2 skills</span></td>
+              </tr>
+              <tr>
+                <td><div class="nm">Josh Dolby</div><div class="muted" style="font-size:11px">Solutions Engineer</div></td>
+                <td>Apex Infinity Solutions</td>
+                <td>Rochester, UK</td>
+                <td class="chips"><span>4 exp</span><span>2 edu</span><span>2 skills</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="drawer">
+            <h4>James Collard</h4>
+            <div class="sub">Solutions Engineer @ Apex Infinity Solutions</div>
+            <div class="loc">Chatham, England, United Kingdom · scraped today</div>
+            <div class="lbl">Experience</div>
+            <div class="row"><b>Solutions Engineer</b> · Apex Infinity Solutions <span class="muted">· May 2026–Present</span></div>
+            <div class="row"><b>Junior Software Developer</b> · Apex Infinity Solutions <span class="muted">· Oct 2025–May 2026</span></div>
+            <div class="row"><b>Customer Service Associate</b> · Co-op <span class="muted">· Jun 2024–Oct 2025</span></div>
+            <div class="row"><b>Freelance</b> <span class="muted">· Oct 2023–Aug 2025</span></div>
+            <div class="row"><b>Infrastructure Maintenance Engineer</b> · Uniper <span class="muted">· Mar 2023–Oct 2023</span></div>
+            <div class="lbl">Education</div>
+            <div class="row">Waterfront UTC <span class="muted">· 2022–2024</span></div>
+            <div class="lbl">Skills</div>
+            <div class="row">Business Solution Delivery · System Architecture</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:22px">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>This structure works</h3><p>Sidebar + leads table + detail panel. Build it like this.</p></div>
+  </div>
+  <div class="option" data-choice="changes" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>Close, but…</h3><p>I'll describe tweaks in the terminal (columns, an overview home page, etc.)</p></div>
+  </div>
+</div>
