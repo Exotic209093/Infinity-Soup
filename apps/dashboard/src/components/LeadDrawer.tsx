@@ -1,5 +1,14 @@
 import type { LeadDetail } from '@aura/contract';
 
+function scrapedWhen(ts: number | null): string {
+  if (!ts) return '';
+  const days = Math.floor((Date.now() - ts) / 86_400_000);
+  if (days <= 0) return 'scraped today';
+  if (days === 1) return 'scraped yesterday';
+  if (days < 30) return `scraped ${days}d ago`;
+  return `scraped ${new Date(ts).toLocaleDateString()}`;
+}
+
 export function LeadDrawer({ lead }: { lead: LeadDetail | null }) {
   if (!lead) {
     return (
@@ -17,7 +26,7 @@ export function LeadDrawer({ lead }: { lead: LeadDetail | null }) {
       <div className="sub">
         {[lead.currentTitle, lead.currentCompany].filter(Boolean).join(' @ ')}
       </div>
-      <div className="loc">{lead.location}</div>
+      <div className="loc">{[lead.location, scrapedWhen(lead.updatedAt)].filter(Boolean).join(' · ')}</div>
 
       {lead.about && (
         <>
