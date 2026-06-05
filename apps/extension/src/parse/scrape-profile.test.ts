@@ -23,8 +23,8 @@ describe('scrapeProfile (real fixture)', () => {
     expect(p.fullName).toBe('James Collard');
   });
 
-  it('composes experience (2) and education (>=1)', () => {
-    expect(p.experience.length).toBe(2);
+  it('composes experience (5 roles, incl. grouped) and education (>=1)', () => {
+    expect(p.experience.length).toBe(5);
     expect(p.education.length).toBeGreaterThanOrEqual(1);
   });
 
