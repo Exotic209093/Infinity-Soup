@@ -1,0 +1,284 @@
+/* ── Viewport reset ── */
+html, body, #root {
+  margin: 0;
+  height: 100%;
+}
+
+/* ── Shell ── */
+.aura-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+/* ── Sidebar ── */
+.aura-side {
+  width: 190px;
+  background: #0b1220;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 0;
+  flex-shrink: 0;
+}
+
+.aura-logo {
+  font-weight: 800;
+  font-size: 18px;
+  color: #fff;
+  letter-spacing: .5px;
+  padding: 0 18px 4px;
+}
+
+.aura-logo small {
+  color: #38bdf8;
+}
+
+.aura-pill {
+  margin: 6px 18px 14px;
+  font-size: 11px;
+  color: #34d399;
+  background: #06281f;
+  border: 1px solid #134e3a;
+  border-radius: 999px;
+  padding: 4px 9px;
+  display: inline-block;
+  width: max-content;
+}
+
+.aura-nav a {
+  display: block;
+  padding: 9px 18px;
+  font-size: 14px;
+  color: #94a3b8;
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.aura-nav a:hover:not(.active) {
+  color: #cbd5e1;
+  background: #111c30;
+}
+
+.aura-nav a.active {
+  color: #fff;
+  background: #111c30;
+  border-left-color: #38bdf8;
+  font-weight: 600;
+}
+
+/* ── Main panel ── */
+.aura-main {
+  flex: 1;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* ── Top bar ── */
+.aura-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.aura-top h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.aura-top .tools {
+  display: flex;
+  gap: 8px;
+}
+
+.aura-input {
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-size: 13px;
+  width: 180px;
+  color: #475569;
+  background: #fff;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.aura-input:focus {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+}
+
+.aura-btn {
+  background: #0ea5e9;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.aura-btn:hover {
+  background: #0284c7;
+}
+
+/* ── Body (table + drawer) ── */
+.aura-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Leads table ── */
+table.leads {
+  width: 54%;
+  border-collapse: collapse;
+  font-size: 13px;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+table.leads th {
+  text-align: left;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 1;
+}
+
+table.leads td {
+  padding: 11px 14px;
+  border-bottom: 1px solid #eef2f7;
+  color: #334155;
+}
+
+table.leads tbody tr {
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+table.leads tbody tr:hover:not(.sel) {
+  background: #f1f5f9;
+}
+
+table.leads tr.sel {
+  background: #eff6ff;
+}
+
+table.leads .nm {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+table.leads .muted {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.chips span {
+  display: inline-block;
+  font-size: 11px;
+  background: #f1f5f9;
+  color: #475569;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-right: 3px;
+}
+
+/* ── Scrollable table wrapper ── */
+.leads-scroll {
+  width: 54%;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid #e2e8f0;
+}
+
+.leads-scroll table.leads {
+  width: 100%;
+}
+
+/* ── Detail drawer ── */
+.drawer {
+  flex: 1;
+  background: #fff;
+  border-left: 1px solid #e2e8f0;
+  padding: 16px 18px;
+  overflow-y: auto;
+}
+
+.drawer h4 {
+  margin: 0 0 2px;
+  font-size: 17px;
+  color: #0f172a;
+}
+
+.drawer .sub {
+  color: #475569;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.drawer .loc {
+  color: #94a3b8;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+
+.drawer .lbl {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: #0ea5e9;
+  font-weight: 700;
+  margin: 14px 0 6px;
+}
+
+.drawer .row {
+  font-size: 13px;
+  color: #334155;
+  padding: 5px 0;
+  border-bottom: 1px dashed #eef2f7;
+}
+
+.drawer .row b {
+  color: #0f172a;
+}
+
+.drawer .muted {
+  color: #94a3b8;
+}
+
+/* ── Empty state ── */
+.drawer .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60%;
+  color: #94a3b8;
+  font-size: 13px;
+  text-align: center;
+  gap: 8px;
+}
