@@ -40,7 +40,32 @@ const hands = new HandsServer({ wss, token: config.token, onResult: (r) => {
 }});
 const dispatcher = new Dispatcher(store, (job) => hands.sendJob(job));
 
-const app = buildHttp({ enqueue: (job) => dispatcher.enqueue(job), genId: () => randomUUID() });
+const app = buildHttp({
+  enqueue: (job) => dispatcher.enqueue(job),
+  genId: () => randomUUID(),
+  // TODO: replace stubs once LeadStore gains listSummaries / getDetail / toCsv (Phase 1B)
+  listLeads: () => leadStore.all().map((r) => ({
+    id: r.id, fullName: r.fullName, currentTitle: r.currentTitle ?? '', currentCompany: r.currentCompany ?? '',
+    location: r.location ?? '', expCount: 0, eduCount: 0, skillCount: 0, updatedAt: r.updatedAt,
+  })),
+  getLead: (id) => {
+    const full = leadStore.getFull(id);
+    if (!full) return null;
+    const r = full.lead;
+    return {
+      id: r.id, fullName: r.fullName, headline: r.headline ?? '', location: r.location ?? '',
+      currentTitle: r.currentTitle ?? '', currentCompany: r.currentCompany ?? '',
+      about: r.about ?? '', profileUrl: r.profileUrl, updatedAt: r.updatedAt,
+      experience: [], education: [], skills: [],
+    };
+  },
+  leadsCsv: () => {
+    const rows = leadStore.all();
+    const header = 'id,fullName,currentTitle,currentCompany,location,updatedAt';
+    const lines = rows.map((r) => [r.id, r.fullName, r.currentTitle ?? '', r.currentCompany ?? '', r.location ?? '', r.updatedAt ?? ''].join(','));
+    return [header, ...lines].join('\n');
+  },
+});
 await app.listen({ port: config.port + 1, host: '127.0.0.1' });
 
 console.log(`AURA brain up.
