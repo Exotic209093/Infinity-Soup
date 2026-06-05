@@ -1,11 +1,14 @@
 /**
- * Render a LinkedIn profile in a NON-INTRUSIVE unfocused popup window, scrape it via the
- * content script, then always close the window.
+ * Render a LinkedIn profile in a popup window, scrape it via the content script, then always
+ * close the window (focus returns to the user's previous window on close).
  *
  * Why a window and not a background tab: LinkedIn does not commit the React-rendered profile
- * body in a never-visible tab (M0 evidence: readyState 'complete' but the body never paints).
- * `chrome.windows.create({type:'popup', focused:false})` makes the page genuinely visible to
- * the renderer so React + the lazy sections paint, while keyboard focus stays with the user.
+ * body in a never-visible tab. We originally tried a NON-INTRUSIVE `focused:false` popup, but
+ * live testing proved that gives `document.visibilityState === 'hidden'` — and LinkedIn gates
+ * its LAZY sections (Experience/Education/Skills) on `visibilityState === 'visible'`, so an
+ * unfocused window only ever paints the top card. The window must therefore be FOCUSED (hence
+ * briefly visible/foreground) for the full profile to render. The interruption is short: the
+ * scrape breaks as soon as the sections appear (~a few seconds) and the window then closes.
  *
  * No new manifest permission is required: there is no `windows` permission in MV3; the
  * declared content script + `chrome.tabs.sendMessage` only need the existing `tabs` permission
@@ -15,10 +18,12 @@ export async function scrapeViaWindow(url: string, timeoutMs = 30000): Promise<u
   const win = await chrome.windows.create({
     url,
     type: 'popup',
-    focused: false,
+    focused: true, // MUST be focused: an unfocused window is visibilityState 'hidden' and
+    // LinkedIn won't lazy-render Experience/Education/Skills into a hidden document.
     state: 'normal',
-    width: 1100,
-    height: 900,
+    // Tall viewport: more sections render eagerly (less reliance on flaky scroll triggers).
+    width: 1280,
+    height: 1600,
     top: 0,
     left: 0,
   });
@@ -27,10 +32,18 @@ export async function scrapeViaWindow(url: string, timeoutMs = 30000): Promise<u
     if (win.id != null) await chrome.windows.remove(win.id).catch(() => {});
     throw new Error('no tab in popup window');
   }
+  // Keep the scrape window in the foreground for the whole scrape. `focused:true` once is not
+  // enough: the moment the user clicks back to another window the popup is occluded and
+  // document.visibilityState flips to 'hidden', at which point LinkedIn FREEZES its lazy
+  // rendering (Experience/Education/Skills never paint). Re-asserting focus keeps it 'visible'.
+  const keepVisible = setInterval(() => {
+    if (win.id != null) chrome.windows.update(win.id, { focused: true }).catch(() => {});
+  }, 1000);
   try {
     await waitForComplete(tabId, timeoutMs);
     return await sendMessageWithRetry(tabId, { kind: 'scrapeProfile' });
   } finally {
+    clearInterval(keepVisible);
     if (win.id != null) await chrome.windows.remove(win.id).catch(() => {});
   }
 }
