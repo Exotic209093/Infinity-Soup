@@ -52,3 +52,62 @@ export const leadCertification = sqliteTable('lead_certification', {
   leadId: text('lead_id').notNull().references(() => lead.id, { onDelete: 'cascade' }),
   name: text('name').notNull(), issuer: text('issuer'), issuedDate: text('issued_date'),
 });
+
+export const account = sqliteTable('account', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  liProfileUrl: text('li_profile_url'),
+  createdAt: integer('created_at').notNull(),
+});
+export type AccountRow = typeof account.$inferSelect;
+
+export const campaign = sqliteTable('campaign', {
+  id: text('id').primaryKey(),
+  accountId: text('account_id').notNull().references(() => account.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  status: text('status').notNull().default('draft'), // draft | running | paused | done
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at'),
+});
+export type CampaignRow = typeof campaign.$inferSelect;
+
+export const node = sqliteTable('node', {
+  id: text('id').primaryKey(),
+  campaignId: text('campaign_id').notNull().references(() => campaign.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(), // visit|connect|message|follow|endorse|wait|condition|end
+  config: text('config', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+  x: integer('x').notNull().default(0),
+  y: integer('y').notNull().default(0),
+});
+export type NodeRow = typeof node.$inferSelect;
+
+export const edge = sqliteTable('edge', {
+  id: text('id').primaryKey(),
+  campaignId: text('campaign_id').notNull().references(() => campaign.id, { onDelete: 'cascade' }),
+  fromNodeId: text('from_node_id').notNull().references(() => node.id, { onDelete: 'cascade' }),
+  toNodeId: text('to_node_id').notNull().references(() => node.id, { onDelete: 'cascade' }),
+  condition: text('condition').notNull().default('default'), // default|accepted|replied|timeout
+});
+export type EdgeRow = typeof edge.$inferSelect;
+
+export const enrollment = sqliteTable('enrollment', {
+  id: text('id').primaryKey(),
+  campaignId: text('campaign_id').notNull().references(() => campaign.id, { onDelete: 'cascade' }),
+  leadId: text('lead_id').notNull().references(() => lead.id, { onDelete: 'cascade' }),
+  currentNodeId: text('current_node_id'),
+  state: text('state').notNull().default('active'), // active|dispatched|paused|done|failed
+  connectionState: text('connection_state').notNull().default('none'), // none|pending|connected
+  nextRunAt: integer('next_run_at'),
+  pendingJobId: text('pending_job_id'),
+  attempts: integer('attempts').notNull().default(0),
+  repliedAt: integer('replied_at'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at'),
+});
+export type EnrollmentRow = typeof enrollment.$inferSelect;
+
+export const setting = sqliteTable('setting', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+});
+export type SettingRow = typeof setting.$inferSelect;
