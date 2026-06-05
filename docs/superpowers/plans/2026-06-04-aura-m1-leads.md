@@ -1264,3 +1264,20 @@ Run: `pnpm -r test` (all green) and `pnpm -r typecheck`. Then append a one-line 
 - MV3 SW keepalive / reconnect → **M4**.
 - Salesforce sync, multichannel email → Phase 2.
 - **Intentionally lean schema:** spec §5 columns `lead.scrapedAt`, `lead_skill.endorsementCount`, and the `lead_experience`/`lead_education` columns not modelled here are *deliberately* omitted from M1 to keep it focused — the complete scrape is preserved in `lead.profileRaw` (JSON), so nothing is lost and these become additive columns later. Not an oversight.
+
+---
+
+## ✅ M1 VERIFIED LIVE (2026-06-05) — what actually worked (read before extending)
+
+Live end-to-end verified on two real profiles via the popup-render pipeline → DB → CSV:
+- **James Collard** (self-view): 5 experience (incl. grouped multi-role Apex), 1 education, 2 skills.
+- **Josh Dolby** (other person): 4 experience (with companies + real `/company/` links), 2 education, 2 skills.
+
+Several plan assumptions were **disproved by live testing** and corrected:
+1. **Voyager JSON is NOT passively harvestable.** Investigated (DuxSoup reads it via its own GraphQL calls with query IDs from a paid *remote config*). Live proof: `profileView` REST = **410 Gone**; the page makes **0 client-side `/voyager/api/` calls** for the main profile (resource-timing empty); `fetch(location.href)` SSR HTML = top card only, **no embedded JSON** (`<code>`/`included`/`fsd_profile` all absent). So M1 scrapes the **hydrated DOM**, not JSON. The Voyager capture layer (`src/voyager/*`, MAIN-world interceptor) is committed as a dormant/opportunistic bonus, not the primary path.
+2. **Text is in `<p>` elements, not `aria-hidden` spans** (the RESUME note above was wrong). Parsers read `<p>` rows.
+3. **The popup MUST be focused.** An unfocused window is `document.visibilityState:'hidden'` and LinkedIn never lazy-renders Experience/Education/Skills into a hidden doc. `open-profile.ts` opens a **focused 1280×1600 popup and re-asserts focus every 1s** for the scrape duration (brief foreground interruption; focus returns on close). Trade-off accepted for M1.
+4. **The profile scrolls an INNER `<main>` container** (`document.body` height == viewport). `window.scrollTo` does nothing; the content script gradually scrolls the tallest scrollable element under `<main>` until the section headings appear.
+5. **Experience entries** are `componentkey="entity-collection-item-…"` elements (not `<ul>/<li>`), parsed by **row shape**. Other-people's profiles add a `Company · Type` row + real `/company/` link; a company with several roles renders **GROUPED** (company header + N sub-roles in one entry) — split into per-role leads. Self-view collapses the company. Both fixtures (`real-profile.html`, `experience-other.html`) guard this.
+
+Durable hooks that held up: section **heading text** (`<h2>Experience/Education/Skills/About`), `document.title`, `componentkey` attributes, `a[href*="/company/"]`/`a[href*="/school/"]`, `[data-testid="expandable-text-box"]`. **Reality note:** obfuscated-DOM scraping stays fragile — expect to re-derive selectors against fresh captures periodically.
