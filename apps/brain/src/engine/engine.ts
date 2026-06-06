@@ -45,7 +45,7 @@ export class Engine {
     if (decision.kind === 'skip') return this.advance(e, node, now);
     if (decision.kind === 'defer') return this.enrollments.reschedule(e.id, decision.nextEligibleAt, now);
 
-    const job: Job = { id: this.genId(), type: node.type as JobType, target: lead.profileUrl, payload: jobPayload(node) };
+    const job: Job = { id: this.genId(), type: node.type as JobType, target: lead.profileUrl, payload: jobPayload(node, lead) };
     const delivered = this.dispatcher.enqueue(job);
     if (delivered) {
       this.enrollments.markDispatched(e.id, job.id, now);

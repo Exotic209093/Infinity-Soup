@@ -1,5 +1,56 @@
 import { describe, it, expect } from 'vitest';
-import { chooseCondition } from './payload.js';
+import { chooseCondition, jobPayload } from './payload.js';
+import type { LeadRow, NodeRow } from '../db/schema.js';
+
+function makeNode(type: string, config: Record<string, unknown>): NodeRow {
+  return { id: 'n1', campaignId: 'c1', type, config, x: 0, y: 0 };
+}
+
+function makeLead(overrides: Partial<LeadRow> = {}): LeadRow {
+  return {
+    id: 'l1', profileUrl: 'u1', fullName: 'Alice Bob', headline: null, location: null,
+    about: null, currentCompany: 'TechCo', currentTitle: 'Engineer',
+    profileRaw: null, status: 'new', createdAt: 1, updatedAt: null,
+    ...overrides,
+  };
+}
+
+describe('jobPayload', () => {
+  it('connect node with template note → fills firstName and company placeholders', () => {
+    const node = makeNode('connect', { note: 'Hi {{firstName}} at {{company}}!' });
+    const lead = makeLead();
+    expect(jobPayload(node, lead)).toEqual({ note: 'Hi Alice at TechCo!' });
+  });
+
+  it('message node with template text → fills firstName', () => {
+    const node = makeNode('message', { text: 'Hey {{firstName}}, want to chat?' });
+    const lead = makeLead();
+    expect(jobPayload(node, lead)).toEqual({ text: 'Hey Alice, want to chat?' });
+  });
+
+  it('connect node with no note → returns empty object', () => {
+    expect(jobPayload(makeNode('connect', {}), makeLead())).toEqual({});
+  });
+
+  it('message node with no text → returns empty object', () => {
+    expect(jobPayload(makeNode('message', {}), makeLead())).toEqual({});
+  });
+
+  it('visit/follow/endorse nodes → return empty object regardless of lead', () => {
+    const lead = makeLead();
+    expect(jobPayload(makeNode('visit', {}), lead)).toEqual({});
+    expect(jobPayload(makeNode('follow', {}), lead)).toEqual({});
+    expect(jobPayload(makeNode('endorse', {}), lead)).toEqual({});
+  });
+
+  it('unknown template key → blank (no double spaces in output)', () => {
+    const node = makeNode('message', { text: 'Hi {{firstName}} from {{unknownKey}}!' });
+    const result = jobPayload(node, makeLead());
+    expect(result).toHaveProperty('text');
+    expect(result.text as string).not.toMatch(/  /);
+    expect(result.text as string).not.toContain('{{');
+  });
+});
 
 describe('chooseCondition', () => {
   it('returns "replied" when repliedAt is set and "replied" is available', () => {

@@ -1,5 +1,6 @@
 import type { JobType } from '@aura/contract';
-import type { NodeRow } from '../db/schema.js';
+import type { LeadRow, NodeRow } from '../db/schema.js';
+import { templateVars, fillTemplate } from '../ai/personalize.js';
 
 const ACTION_TYPES = new Set<JobType>(['visit', 'connect', 'message', 'follow', 'endorse']);
 export const isActionNode = (type: string): type is JobType => ACTION_TYPES.has(type as JobType);
@@ -9,11 +10,18 @@ export function waitMs(node: NodeRow): number {
   return typeof v === 'number' && v >= 0 ? v : 0;
 }
 
-/** Build a Job payload from an action node's config. AI rendering is M3 — static config for now. */
-export function jobPayload(node: NodeRow): Record<string, unknown> {
+/** Build a Job payload from an action node's config, filling template placeholders from the lead. */
+export function jobPayload(node: NodeRow, lead: LeadRow): Record<string, unknown> {
   const c = (node.config ?? {}) as Record<string, unknown>;
-  if (node.type === 'connect') return c.note ? { note: c.note } : {};
-  if (node.type === 'message') return c.text ? { text: c.text } : {};
+  const vars = templateVars(lead);
+  if (node.type === 'connect') {
+    const note = fillTemplate(String(c.note ?? ''), vars);
+    return note ? { note } : {};
+  }
+  if (node.type === 'message') {
+    const text = fillTemplate(String(c.text ?? ''), vars);
+    return text ? { text } : {};
+  }
   return {};
 }
 
