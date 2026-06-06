@@ -1,15 +1,34 @@
-const NAV = ['Overview', 'Leads', 'Campaigns', 'Sequences', 'Settings'];
+export type Tab = 'Overview' | 'Leads' | 'Campaigns';
 
-export function Sidebar() {
+const TABS: Tab[] = ['Overview', 'Leads', 'Campaigns'];
+const FUTURE = ['Sequences', 'Settings'];
+
+export function Sidebar({
+  active,
+  onNavigate,
+}: {
+  active: Tab;
+  onNavigate: (tab: Tab) => void;
+}) {
   return (
     <aside className="aura-side">
       <div className="aura-logo">◆ AURA</div>
       <div className="aura-pill">● Brain connected</div>
       <nav className="aura-nav">
-        {NAV.map((n) => (
-          <a key={n} className={n === 'Leads' ? 'active' : ''}>
+        {TABS.map((n) => (
+          <button
+            key={n}
+            type="button"
+            className={n === active ? 'active' : ''}
+            onClick={() => onNavigate(n)}
+          >
             {n}
-          </a>
+          </button>
+        ))}
+        {FUTURE.map((n) => (
+          <button key={n} type="button" className="disabled" disabled title="Coming soon">
+            {n}
+          </button>
         ))}
       </nav>
     </aside>
