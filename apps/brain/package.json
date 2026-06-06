@@ -16,7 +16,9 @@
     "enroll": "tsx src/enroll.ts",
     "campaign:tick": "tsx src/campaign-tick.ts",
     "campaign:status": "tsx src/campaign-status.ts",
-    "ai:preview": "tsx src/ai-preview.ts"
+    "ai:preview": "tsx src/ai-preview.ts",
+    "breaker:status": "tsx src/breaker-status.ts",
+    "breaker:reset": "tsx src/breaker-reset.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

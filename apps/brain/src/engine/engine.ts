@@ -6,6 +6,7 @@ import type { Dispatcher } from '../dispatcher.js';
 import type { EnrollmentRow, NodeRow } from '../db/schema.js';
 import type { Governor } from './governor.js';
 import { chooseCondition, isActionNode, jobPayload, waitMs } from './payload.js';
+import { tripReason } from './breaker.js';
 
 type Now = () => number;
 const RETRY_BACKOFF_MS = 5 * 60 * 1000;
@@ -21,6 +22,7 @@ export class Engine {
     private dispatcher: Dispatcher,
     private genId: () => string,
     private now: Now = Date.now,
+    private onDanger?: (reason: string, now: number) => void,
   ) {}
 
   /** Run all due enrollments once. Called by the 60s ticker and the campaign:tick CLI. */
@@ -58,6 +60,11 @@ export class Engine {
   /** Hands Result for a dispatched enrollment. */
   onResult(result: Result): void {
     const now = this.now();
+
+    // Trip the circuit breaker on any danger signal, regardless of whether we find an enrollment.
+    const danger = tripReason(result);
+    if (danger) this.onDanger?.(danger, now);
+
     const e = this.enrollments.findByPendingJob(result.jobId);
     if (!e || !e.currentNodeId) return;
     const node = this.campaigns.getNode(e.currentNodeId);
