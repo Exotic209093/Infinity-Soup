@@ -1,4 +1,4 @@
-import type { JobType, Result } from '@aura/contract';
+import type { JobType } from '@aura/contract';
 import type { NodeRow } from '../db/schema.js';
 
 const ACTION_TYPES = new Set<JobType>(['visit', 'connect', 'message', 'follow', 'endorse']);
@@ -17,7 +17,18 @@ export function jobPayload(node: NodeRow): Record<string, unknown> {
   return {};
 }
 
-/** Which outgoing-edge condition to follow given a Result. MVP: always 'default' (branching is M3). */
-export function outcomeFor(_node: NodeRow, _result: Result): string {
+export interface BranchSignals { connectionState: string; repliedAt: number | null; }
+
+/**
+ * Pick the outgoing-edge condition that best matches the enrollment's signals,
+ * among the conditions actually present on the node's outgoing edges.
+ * Priority: replied > accepted > timeout > default. Always resolvable (callers fall back to 'default').
+ */
+export function chooseCondition(signals: BranchSignals, available: string[]): string {
+  const has = (c: string) => available.includes(c);
+  if (signals.repliedAt != null && has('replied')) return 'replied';
+  if (signals.connectionState === 'connected' && has('accepted')) return 'accepted';
+  // No positive signal yet: if the node offers a 'timeout' fork (and isn't relying on 'default'), take it.
+  if (has('timeout') && !has('default')) return 'timeout';
   return 'default';
 }

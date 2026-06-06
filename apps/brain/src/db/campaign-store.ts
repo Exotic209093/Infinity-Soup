@@ -48,6 +48,11 @@ export class CampaignStore {
       ?? this.db.select().from(edge).where(and(eq(edge.fromNodeId, nodeId), eq(edge.condition, 'default'))).get();
   }
 
+  /** All outgoing edges from a node (any condition). */
+  outgoingEdges(nodeId: string): EdgeRow[] {
+    return this.db.select().from(edge).where(eq(edge.fromNodeId, nodeId)).all();
+  }
+
   /** The start node = a node in the campaign with no incoming edge. */
   startNode(campaignId: string): NodeRow | undefined {
     const nodes = this.listNodes(campaignId);
