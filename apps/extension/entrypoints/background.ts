@@ -7,6 +7,22 @@ export default defineBackground(() => {
   let socket: WebSocket | null = null;
   let connecting = false;
 
+  // In-memory hard-stop guard for the hands. The brain is the real scheduler, but this local
+  // flag is the safety valve: when paused, executeJob refuses to run anything. It is mirrored
+  // to chrome.storage.local ('paused') so it survives a service-worker restart and so the popup
+  // can read it. The in-memory copy is the source of truth for the fast path in executeJob.
+  let paused = false;
+
+  /** Is the WS to the brain currently OPEN? Mirrored to storage for the popup to read. */
+  function isConnected(): boolean {
+    return socket?.readyState === WebSocket.OPEN;
+  }
+
+  /** Persist the live connection flag so the popup (a separate document) can observe it. */
+  function publishConnected(): void {
+    chrome.storage.local.set({ connected: isConnected() }).catch(() => {});
+  }
+
   async function connect() {
     if (connecting) return;
     connecting = true;
@@ -22,9 +38,10 @@ export default defineBackground(() => {
         },
         execute: executeJob,
       });
-      socket.addEventListener('open', () => conn.onOpen());
+      socket.addEventListener('open', () => { conn.onOpen(); publishConnected(); });
       socket.addEventListener('message', (e) => conn.onMessage(String(e.data)));
-      socket.addEventListener('close', () => { socket = null; });
+      socket.addEventListener('close', () => { socket = null; publishConnected(); });
+      socket.addEventListener('error', () => publishConnected());
     } finally {
       connecting = false;
     }
@@ -35,6 +52,11 @@ export default defineBackground(() => {
   const PROFILE_URL_RE = /^https:\/\/www\.linkedin\.com\/in\/[^/?#]+/;
 
   async function executeJob(job: Job): Promise<Result> {
+    // Emergency hard-stop (hands side). If the user pulled "Stop all" in the popup, refuse to
+    // act on any job — no tab/window is opened — and report it back so the brain sees the skip.
+    if (paused) {
+      return { jobId: job.id, status: 'skipped', error: 'paused: AURA emergency stop is active' };
+    }
     if (job.type !== 'visit' && job.type !== 'scrapeProfile') {
       return { jobId: job.id, status: 'skipped', error: `unsupported job type: ${job.type}` };
     }
@@ -102,11 +124,47 @@ export default defineBackground(() => {
     });
   }
 
+  // Restore the persisted pause state on service-worker startup so a "Stop all" survives the SW
+  // being torn down and respawned. Then publish the (disconnected) connection flag immediately so
+  // the popup has a value to read even before the socket opens.
+  chrome.storage.local.get(['paused']).then(({ paused: p }) => { paused = !!p; }).catch(() => {});
+  publishConnected();
+
   connect();
   chrome.storage.onChanged.addListener((changes) => {
     if ('port' in changes || 'token' in changes) {
       socket?.close();
       connect();
+    }
+  });
+
+  // Popup <-> background channel. Returning `true` from a listener keeps the sendResponse channel
+  // open for the async reply.
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (!msg || typeof msg !== 'object') return;
+    const type = (msg as { type?: unknown }).type;
+
+    // Popup asks for current status on open.
+    if (type === 'aura:status') {
+      sendResponse({ connected: isConnected(), paused });
+      return; // synchronous reply; no need to keep the channel open
+    }
+
+    // Emergency Stop-all from the popup: pull the local guard and persist it. Any in-flight job
+    // finishes, but no new job will run (executeJob short-circuits on `paused`).
+    if (type === 'aura:stopAll') {
+      paused = true;
+      chrome.storage.local.set({ paused: true }).catch(() => {});
+      sendResponse({ connected: isConnected(), paused });
+      return;
+    }
+
+    // Resume from the popup: clear the guard so the hands act on jobs again.
+    if (type === 'aura:resume') {
+      paused = false;
+      chrome.storage.local.set({ paused: false }).catch(() => {});
+      sendResponse({ connected: isConnected(), paused });
+      return;
     }
   });
 });

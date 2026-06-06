@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AURA</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --panel: #111a2e;
+        --accent: #38bdf8;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --green: #22c55e;
+        --amber: #f59e0b;
+        --grey: #64748b;
+        --danger: #ef4444;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; }
+      body {
+        width: 260px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        font-size: 13px;
+        padding: 14px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .diamond { color: var(--accent); font-size: 16px; line-height: 1; }
+      .brand {
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        color: var(--text);
+      }
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        background: var(--panel);
+        border: 1px solid rgba(56, 189, 248, 0.12);
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 12px;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--grey);
+        flex: 0 0 auto;
+        box-shadow: 0 0 0 0 transparent;
+      }
+      .dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+      .dot.paused { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+      .dot.disconnected { background: var(--grey); }
+      .status-label { font-weight: 600; }
+      .status-sub { color: var(--muted); font-size: 11px; margin-left: auto; }
+      button {
+        width: 100%;
+        font: inherit;
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 9px 12px;
+        cursor: pointer;
+        border: 1px solid transparent;
+      }
+      #stop {
+        background: var(--danger);
+        color: #fff;
+        border-color: rgba(239, 68, 68, 0.6);
+      }
+      #stop:hover { background: #dc2626; }
+      #resume {
+        background: transparent;
+        color: var(--accent);
+        border-color: rgba(56, 189, 248, 0.5);
+        margin-top: 8px;
+      }
+      #resume:hover { background: rgba(56, 189, 248, 0.08); }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span class="diamond">&#9670;</span>
+      <span class="brand">AURA</span>
+    </header>
+
+    <div class="status">
+      <span id="dot" class="dot disconnected"></span>
+      <span id="label" class="status-label">&hellip;</span>
+      <span id="sub" class="status-sub"></span>
+    </div>
+
+    <button id="stop" type="button">&#9209; Stop all</button>
+    <button id="resume" type="button" hidden>Resume</button>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
