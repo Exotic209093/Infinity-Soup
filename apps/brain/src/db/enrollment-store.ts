@@ -35,6 +35,14 @@ export class EnrollmentStore {
     return this.db.select().from(enrollment).where(eq(enrollment.pendingJobId, jobId)).get();
   }
 
+  listByCampaign(campaignId: string): EnrollmentRow[] {
+    return this.db.select().from(enrollment).where(eq(enrollment.campaignId, campaignId)).all();
+  }
+
+  all(): EnrollmentRow[] {
+    return this.db.select().from(enrollment).all();
+  }
+
   /** All enrollments currently parked in the 'dispatched' state (awaiting a Result). */
   dispatched(): EnrollmentRow[] {
     return this.db.select().from(enrollment).where(eq(enrollment.state, 'dispatched')).all();

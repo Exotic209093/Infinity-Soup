@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import Database from 'better-sqlite3';
 import fastifyStatic from '@fastify/static';
 import { toLeadSummary, toLeadDetail } from './leads-view.js';
+import { toCampaignSummary, toCampaignDetail, toEnrollmentView } from './campaign-view.js';
 import { leadsToCsv } from './csv.js';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
@@ -18,7 +19,7 @@ import { SettingStore } from './db/setting-store.js';
 import { ensureAccount } from './db/account.js';
 import { HandsServer } from './ws/server.js';
 import { Dispatcher } from './dispatcher.js';
-import { Governor, loadGovernorConfig } from './engine/governor.js';
+import { Governor, loadGovernorConfig, startOfDay } from './engine/governor.js';
 import { Engine } from './engine/engine.js';
 import { buildHttp } from './http.js';
 import { ScrapedProfileSchema } from '@aura/contract';
@@ -69,6 +70,35 @@ const app = buildHttp({
     fullName: l.fullName, headline: l.headline, location: l.location,
     currentCompany: l.currentCompany, currentTitle: l.currentTitle, profileUrl: l.profileUrl,
   }))),
+  getOverview: () => {
+    const cfg = loadGovernorConfig(settingStore);
+    const since = startOfDay(Date.now());
+    const caps = Object.entries(cfg.caps).map(([action, cap]) => ({ action, used: store.countByTypeSince(action, since), cap }));
+    const enrollments = enrollmentStore.all();
+    const campaigns = campaignStore.allCampaigns();
+    return {
+      caps,
+      counts: {
+        leads: leadStore.all().length,
+        campaigns: campaigns.length,
+        runningCampaigns: campaigns.filter((c) => c.status === 'running').length,
+        activeEnrollments: enrollments.filter((e) => e.state === 'active' || e.state === 'dispatched').length,
+        doneEnrollments: enrollments.filter((e) => e.state === 'done').length,
+      },
+      recentActivity: store.recent(15).map((j) => ({ jobId: j.id, type: j.type, target: j.target, status: j.status, at: j.completedAt ?? j.dispatchedAt ?? j.createdAt })),
+    };
+  },
+  listCampaigns: () => campaignStore.allCampaigns().map((c) => toCampaignSummary(c, campaignStore.listNodes(c.id), enrollmentStore.listByCampaign(c.id))),
+  getCampaign: (id) => {
+    const c = campaignStore.getCampaign(id);
+    if (!c) return null;
+    const evs = enrollmentStore.listByCampaign(id).map((e) => toEnrollmentView(
+      e,
+      e.currentNodeId ? (campaignStore.getNode(e.currentNodeId)?.type ?? '-') : '-',
+      leadStore.get(e.leadId)?.fullName ?? e.leadId,
+    ));
+    return toCampaignDetail(c, campaignStore.listNodes(id), campaignStore.listEdges(id), evs);
+  },
 });
 
 // Serve the built dashboard (if present) as a SPA at '/'. Built later by apps/dashboard.

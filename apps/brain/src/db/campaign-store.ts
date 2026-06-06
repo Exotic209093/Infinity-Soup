@@ -17,6 +17,9 @@ export class CampaignStore {
   getCampaign(id: string): CampaignRow | undefined {
     return this.db.select().from(campaign).where(eq(campaign.id, id)).get();
   }
+  allCampaigns(): CampaignRow[] {
+    return this.db.select().from(campaign).all();
+  }
 
   addNode(campaignId: string, type: string, config: Record<string, unknown>, now: number, x = 0, y = 0): string {
     const id = randomUUID();

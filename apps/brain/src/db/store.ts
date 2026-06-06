@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, count } from 'drizzle-orm';
+import { and, eq, gte, inArray, count, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Job, Result } from '@aura/contract';
 import { jobs, type JobRow } from './schema.js';
@@ -25,6 +25,11 @@ export class JobStore {
 
   get(id: string): JobRow | undefined {
     return this.db.select().from(jobs).where(eq(jobs.id, id)).get();
+  }
+
+  /** Most recent jobs by createdAt (newest first), capped at `limit`. Used for the overview activity feed. */
+  recent(limit: number): JobRow[] {
+    return this.db.select().from(jobs).orderBy(desc(jobs.createdAt)).limit(limit).all();
   }
 
   /** Count jobs of a type actually sent to hands ('dispatched') or confirmed ('ok') since `since`. Used for daily caps. */

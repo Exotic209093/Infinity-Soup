@@ -1,6 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { JobSchema, type Job } from '@aura/contract';
-import type { LeadSummary, LeadDetail } from '@aura/contract';
+import type { LeadSummary, LeadDetail, Overview, CampaignSummary, CampaignDetail } from '@aura/contract';
 import { z } from 'zod';
 
 const NewJobSchema = z.object({
@@ -15,6 +15,9 @@ export interface HttpDeps {
   listLeads: () => LeadSummary[];
   getLead: (id: string) => LeadDetail | null;
   leadsCsv: () => string;
+  getOverview: () => Overview;
+  listCampaigns: () => CampaignSummary[];
+  getCampaign: (id: string) => CampaignDetail | null;
 }
 
 export function buildHttp(deps: HttpDeps): FastifyInstance {
@@ -35,6 +38,13 @@ export function buildHttp(deps: HttpDeps): FastifyInstance {
     const lead = deps.getLead(req.params.id);
     if (!lead) return reply.code(404).send({ error: 'not found' });
     return lead;
+  });
+  app.get('/overview', async () => deps.getOverview());
+  app.get('/campaigns', async () => deps.listCampaigns());
+  app.get<{ Params: { id: string } }>('/campaigns/:id', async (req, reply) => {
+    const c = deps.getCampaign(req.params.id);
+    if (!c) return reply.code(404).send({ error: 'not found' });
+    return c;
   });
   return app;
 }

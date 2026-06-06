@@ -77,3 +77,35 @@ export const LeadDetailSchema = z.object({
   experience: z.array(ExperienceViewSchema), education: z.array(EducationViewSchema), skills: z.array(z.string()),
 });
 export type LeadDetail = z.infer<typeof LeadDetailSchema>;
+
+// ── Campaigns + Overview views (dashboard) ──
+export const EnrollmentViewSchema = z.object({
+  id: z.string(), leadId: z.string(), leadName: z.string(),
+  state: z.string(), currentNodeType: z.string(), connectionState: z.string(),
+  nextRunAt: z.number().nullable(), attempts: z.number(),
+});
+export type EnrollmentView = z.infer<typeof EnrollmentViewSchema>;
+
+export const NodeViewSchema = z.object({ id: z.string(), type: z.string(), config: z.record(z.unknown()) });
+export const EdgeViewSchema = z.object({ id: z.string(), fromNodeId: z.string(), toNodeId: z.string(), condition: z.string() });
+
+export const CampaignSummarySchema = z.object({
+  id: z.string(), name: z.string(), status: z.string(), nodeCount: z.number(),
+  counts: z.object({ active: z.number(), dispatched: z.number(), done: z.number(), failed: z.number(), total: z.number() }),
+});
+export type CampaignSummary = z.infer<typeof CampaignSummarySchema>;
+
+export const CampaignDetailSchema = z.object({
+  id: z.string(), name: z.string(), status: z.string(),
+  nodes: z.array(NodeViewSchema), edges: z.array(EdgeViewSchema), enrollments: z.array(EnrollmentViewSchema),
+});
+export type CampaignDetail = z.infer<typeof CampaignDetailSchema>;
+
+export const CapUsageSchema = z.object({ action: z.string(), used: z.number(), cap: z.number() });
+export const ActivityItemSchema = z.object({ jobId: z.string(), type: z.string(), target: z.string(), status: z.string(), at: z.number().nullable() });
+export const OverviewSchema = z.object({
+  caps: z.array(CapUsageSchema),
+  counts: z.object({ leads: z.number(), campaigns: z.number(), runningCampaigns: z.number(), activeEnrollments: z.number(), doneEnrollments: z.number() }),
+  recentActivity: z.array(ActivityItemSchema),
+});
+export type Overview = z.infer<typeof OverviewSchema>;
