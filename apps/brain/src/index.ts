@@ -20,6 +20,7 @@ import { ensureAccount } from './db/account.js';
 import { HandsServer } from './ws/server.js';
 import { Dispatcher } from './dispatcher.js';
 import { Governor, loadGovernorConfig, startOfDay } from './engine/governor.js';
+import { loadBreaker, tripBreaker } from './engine/breaker.js';
 import { Engine } from './engine/engine.js';
 import { buildHttp } from './http.js';
 import { ScrapedProfileSchema } from '@aura/contract';
@@ -36,7 +37,7 @@ const leadStore = new LeadStore(db);
 const campaignStore = new CampaignStore(db);
 const enrollmentStore = new EnrollmentStore(db);
 const settingStore = new SettingStore(db);
-ensureAccount(db, Date.now());
+const account = ensureAccount(db, Date.now());
 
 let engine: Engine; // assigned after `dispatcher` below; referenced by hands.onResult (runtime only)
 
@@ -57,8 +58,14 @@ const hands = new HandsServer({ wss, token: config.token, onResult: (r) => {
   engine.onResult(r); // M2: advance any enrollment waiting on this job
 }});
 const dispatcher = new Dispatcher(store, (job) => hands.sendJob(job));
-const governor = new Governor(store, loadGovernorConfig(settingStore));
-engine = new Engine(campaignStore, enrollmentStore, leadStore, governor, dispatcher, () => randomUUID());
+const governor = new Governor(store, loadGovernorConfig(settingStore), {
+  accountCreatedAt: account.createdAt,
+  breakerTripped: () => loadBreaker(settingStore).tripped,
+});
+engine = new Engine(campaignStore, enrollmentStore, leadStore, governor, dispatcher, () => randomUUID(), Date.now, (reason, now) => {
+  tripBreaker(settingStore, reason, now);
+  console.warn('[breaker] TRIPPED:', reason, '— dispatch halted until reset (pnpm --filter @aura/brain breaker:reset)');
+});
 engine.reconcile(Date.now()); // recover any enrollments left 'dispatched' by a prior run
 
 const app = buildHttp({

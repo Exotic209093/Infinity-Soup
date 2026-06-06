@@ -28,7 +28,9 @@ function freshDb(): BetterSQLite3Database {
 
 const OPEN: GovernorConfig = {
   caps: { ...DEFAULT_GOVERNOR_CONFIG.caps },
-  workingHours: { enabled: false, startHour: 0, endHour: 24, days: [0,1,2,3,4,5,6] },
+  workingHours: { enabled: false, startHour: 0, endHour: 24, days: [0, 1, 2, 3, 4, 5, 6] },
+  warmup: { enabled: false, rampDays: 21, minFraction: 0.25 },
+  pacing: { enabled: false, minGapMs: 0, maxGapMs: 0, dailyJitter: 0 },
 };
 
 function harness(cfg: GovernorConfig = OPEN) {

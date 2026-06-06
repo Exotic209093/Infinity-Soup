@@ -20,7 +20,12 @@ function freshDb(): BetterSQLite3Database {
   migrate(db, { migrationsFolder: join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'drizzle') });
   return db;
 }
-const OPEN: GovernorConfig = { caps: { ...DEFAULT_GOVERNOR_CONFIG.caps }, workingHours: { enabled: false, startHour: 0, endHour: 24, days: [0, 1, 2, 3, 4, 5, 6] } };
+const OPEN: GovernorConfig = {
+  caps: { ...DEFAULT_GOVERNOR_CONFIG.caps },
+  workingHours: { enabled: false, startHour: 0, endHour: 24, days: [0, 1, 2, 3, 4, 5, 6] },
+  warmup: { enabled: false, rampDays: 21, minFraction: 0.25 },
+  pacing: { enabled: false, minGapMs: 0, maxGapMs: 0, dailyJitter: 0 },
+};
 
 function harness(cfg: GovernorConfig = OPEN) {
   const db = freshDb();
