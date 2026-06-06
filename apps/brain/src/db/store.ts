@@ -44,4 +44,11 @@ export class JobStore {
     return this.db.select({ id: jobs.id }).from(jobs)
       .where(and(eq(jobs.type, type), eq(jobs.target, target), eq(jobs.status, 'ok'))).get() !== undefined;
   }
+
+  /** Timestamp of the most recent SENT action (status dispatched/ok), for pacing. null if none. */
+  lastActionAt(): number | null {
+    const row = this.db.select({ t: jobs.createdAt }).from(jobs)
+      .where(inArray(jobs.status, ['dispatched', 'ok'])).orderBy(desc(jobs.createdAt)).limit(1).get();
+    return row?.t ?? null;
+  }
 }

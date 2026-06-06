@@ -63,6 +63,37 @@ describe('JobStore', () => {
     expect(store.countByTypeSince('visit', 0)).toBe(2); // d1 (dispatched) + o1 (ok); f1/s1 excluded
   });
 
+  it('lastActionAt: null when empty; returns latest dispatched/ok createdAt; ignores queued/failed', () => {
+    const store = freshStore();
+    expect(store.lastActionAt()).toBeNull();
+
+    // queued job — should not count
+    store.create({ id: 'q1', type: 'visit', target: 'u1', payload: {} }, 1000);
+    expect(store.lastActionAt()).toBeNull();
+
+    // failed job — should not count
+    store.create({ id: 'f1', type: 'visit', target: 'u2', payload: {} }, 2000);
+    store.saveResult({ jobId: 'f1', status: 'failed' }, 2000);
+    expect(store.lastActionAt()).toBeNull();
+
+    // dispatched — should count
+    store.create({ id: 'd1', type: 'visit', target: 'u3', payload: {} }, 3000);
+    store.markDispatched('d1', 3000);
+    expect(store.lastActionAt()).toBe(3000);
+
+    // ok job with higher createdAt — should win
+    store.create({ id: 'o1', type: 'connect', target: 'u4', payload: {} }, 5000);
+    store.markDispatched('o1', 5000);
+    store.saveResult({ jobId: 'o1', status: 'ok' }, 5001);
+    expect(store.lastActionAt()).toBe(5000);
+
+    // earlier ok — should not displace the later one
+    store.create({ id: 'o2', type: 'visit', target: 'u5', payload: {} }, 4000);
+    store.markDispatched('o2', 4000);
+    store.saveResult({ jobId: 'o2', status: 'ok' }, 4001);
+    expect(store.lastActionAt()).toBe(5000);
+  });
+
   it('hasSucceeded is true only after an ok result for that type+target', () => {
     const store = freshStore();
     store.create({ id: 'j1', type: 'visit', target: 'u1', payload: {} }, 1);
