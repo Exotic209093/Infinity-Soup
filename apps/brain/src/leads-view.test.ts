@@ -10,11 +10,15 @@ const full: FullLead = {
   education: [{ school: 'MIT', startYear: 2012, endYear: 2016 }] as any,
   skills: [{ name: 'TS' }, { name: 'Lead' }] as any,
   certifications: [],
+  posts: [
+    { text: 'Shipping a new feature today!', postedAt: '2w', url: 'https://x/1', likes: 12, comments: 3, reposts: 0, isRepost: 0 },
+    { text: 'Reposted thoughts on AI', postedAt: '1mo', url: '', likes: 0, comments: 0, reposts: 0, isRepost: 1 },
+  ] as any,
 };
 
 describe('leads-view mappers', () => {
   it('toLeadSummary counts children', () => {
-    expect(toLeadSummary(full)).toMatchObject({ id: 'l1', fullName: 'Jane Doe', currentCompany: 'Acme', expCount: 2, eduCount: 1, skillCount: 2 });
+    expect(toLeadSummary(full)).toMatchObject({ id: 'l1', fullName: 'Jane Doe', currentCompany: 'Acme', expCount: 2, eduCount: 1, skillCount: 2, postCount: 2 });
   });
   it('toLeadDetail formats dates/years + flattens skills', () => {
     const d = toLeadDetail(full);
@@ -22,5 +26,10 @@ describe('leads-view mappers', () => {
     expect(d.education[0]).toEqual({ school: 'MIT', years: '2012 – 2016' });
     expect(d.skills).toEqual(['TS', 'Lead']);
     expect(d.about).toBe('about me');
+  });
+  it('toLeadDetail maps posts with a compact engagement line', () => {
+    const d = toLeadDetail(full);
+    expect(d.posts[0]).toEqual({ text: 'Shipping a new feature today!', postedAt: '2w', url: 'https://x/1', engagement: '12 likes · 3 comments' });
+    expect(d.posts[1].engagement).toBe(''); // no engagement → empty
   });
 });

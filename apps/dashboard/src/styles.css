@@ -129,6 +129,48 @@ html, body, #root {
   gap: 8px;
 }
 
+.add-lead {
+  display: flex;
+  gap: 6px;
+}
+
+.add-lead .aura-input {
+  width: 250px;
+}
+
+/* ── Scrape status banner ── */
+.scrape-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  font-size: 12px;
+  background: #ecfeff;
+  color: #0369a1;
+  border-bottom: 1px solid #cffafe;
+}
+
+.scrape-banner.err {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-bottom-color: #fecaca;
+}
+
+.scrape-banner__x {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: .6;
+}
+
+.scrape-banner__x:hover {
+  opacity: 1;
+}
+
 .aura-input {
   border: 1px solid #cbd5e1;
   border-radius: 7px;
@@ -163,6 +205,17 @@ html, body, #root {
 
 .aura-btn:hover {
   background: #0284c7;
+}
+
+.aura-btn:disabled {
+  opacity: .55;
+  cursor: default;
+  background: #0ea5e9;
+}
+
+.aura-input:disabled {
+  opacity: .6;
+  cursor: default;
 }
 
 /* ── Body (table + drawer) ── */
@@ -260,7 +313,28 @@ table.leads .muted {
 .drawer .loc {
   color: #94a3b8;
   font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.drawer .stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-bottom: 14px;
+}
+
+.drawer .stats span {
+  font-size: 11px;
+  color: #475569;
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+.drawer .stats span.otw {
+  color: #047857;
+  background: #d1fae5;
+  font-weight: 600;
 }
 
 .drawer .lbl {
@@ -285,6 +359,34 @@ table.leads .muted {
 
 .drawer .muted {
   color: #94a3b8;
+}
+
+/* ── Posts (drawer) ── */
+.drawer .post {
+  padding: 8px 0;
+  border-bottom: 1px dashed #eef2f7;
+}
+
+.drawer .post-text {
+  font-size: 13px;
+  color: #334155;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.drawer .post-meta {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 3px;
+}
+
+.drawer .post-meta a {
+  color: #0ea5e9;
+  text-decoration: none;
+}
+
+.drawer .post-meta a:hover {
+  text-decoration: underline;
 }
 
 /* ── Empty state ── */

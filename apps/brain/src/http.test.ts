@@ -12,15 +12,15 @@ const campaignDetail = { id: 'c1', name: 'Outreach', status: 'running', nodes: [
 const dashStubs = { getOverview: () => overview, listCampaigns: () => [] as any, getCampaign: () => null };
 
 describe('HTTP enqueue API', () => {
-  it('POST /jobs enqueues a visit job and returns its id', async () => {
-    const enqueue = vi.fn();
+  it('POST /jobs enqueues a visit job and returns its id + delivery flag', async () => {
+    const enqueue = vi.fn(() => true);
     const app = buildHttp({ enqueue, genId: () => 'generated-id', listLeads: () => [], getLead: () => null, leadsCsv: () => '', ...dashStubs });
     const res = await app.inject({
       method: 'POST', url: '/jobs',
       payload: { type: 'visit', target: 'https://www.linkedin.com/in/jane' },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ id: 'generated-id' });
+    expect(res.json()).toEqual({ id: 'generated-id', delivered: true });
     expect(enqueue).toHaveBeenCalledWith({
       id: 'generated-id', type: 'visit', target: 'https://www.linkedin.com/in/jane', payload: {},
     });
@@ -34,8 +34,8 @@ describe('HTTP enqueue API', () => {
     await app.close();
   });
 
-  const summary = { id: 'l1', fullName: 'Jane Doe', currentTitle: 'CEO', currentCompany: 'Acme', location: 'London', expCount: 2, eduCount: 1, skillCount: 2, updatedAt: 2 };
-  const detail = { id: 'l1', fullName: 'Jane Doe', headline: 'Founder', location: 'London', currentTitle: 'CEO', currentCompany: 'Acme', about: 'a', profileUrl: 'u', updatedAt: 2, experience: [], education: [], skills: [] };
+  const summary = { id: 'l1', fullName: 'Jane Doe', currentTitle: 'CEO', currentCompany: 'Acme', location: 'London', expCount: 2, eduCount: 1, skillCount: 2, postCount: 1, updatedAt: 2 };
+  const detail = { id: 'l1', fullName: 'Jane Doe', headline: 'Founder', location: 'London', currentTitle: 'CEO', currentCompany: 'Acme', about: 'a', profileUrl: 'u', updatedAt: 2, connections: 272, followers: 275, openToWork: false, experience: [], education: [], skills: [], posts: [] };
 
   it('GET /leads returns the summary list', async () => {
     const app = buildHttp({ enqueue: vi.fn(), genId: () => 'x', listLeads: () => [summary], getLead: () => null, leadsCsv: () => 'h\n', ...dashStubs });

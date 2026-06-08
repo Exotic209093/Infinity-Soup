@@ -10,6 +10,7 @@ function makeLead(overrides: Partial<LeadRow> = {}): LeadRow {
   return {
     id: 'l1', profileUrl: 'u1', fullName: 'Alice Bob', headline: null, location: null,
     about: null, currentCompany: 'TechCo', currentTitle: 'Engineer',
+    connections: null, followers: null, openToWork: null,
     profileRaw: null, status: 'new', createdAt: 1, updatedAt: null,
     ...overrides,
   };

@@ -1,0 +1,15 @@
+{
+  "name": "AI message demo",
+  "nodes": [
+    {
+      "key": "m1",
+      "type": "message",
+      "config": {
+        "text": "Hi {{firstName}} — loved your recent post: \"{{recentPost}}\" 👏 Would love to connect about what you're building at {{company}}.",
+        "aiInstruction": "Write a warm, specific, non-salesy LinkedIn DM under 300 characters. Reference one of their recent posts naturally, mention a shared interest in AI/Salesforce engineering, and ask to connect. No emojis-only filler."
+      }
+    },
+    { "key": "end", "type": "end", "config": {} }
+  ],
+  "edges": [{ "from": "m1", "to": "end" }]
+}

@@ -28,6 +28,14 @@ export function LeadDrawer({ lead }: { lead: LeadDetail | null }) {
       </div>
       <div className="loc">{[lead.location, scrapedWhen(lead.updatedAt)].filter(Boolean).join(' · ')}</div>
 
+      {(lead.connections > 0 || lead.followers > 0 || lead.openToWork) && (
+        <div className="stats">
+          {lead.connections > 0 && <span>{lead.connections.toLocaleString()} connections</span>}
+          {lead.followers > 0 && <span>{lead.followers.toLocaleString()} followers</span>}
+          {lead.openToWork && <span className="otw">Open to work</span>}
+        </div>
+      )}
+
       {lead.about && (
         <>
           <div className="lbl">About</div>
@@ -56,6 +64,26 @@ export function LeadDrawer({ lead }: { lead: LeadDetail | null }) {
         <>
           <div className="lbl">Skills</div>
           <div className="row">{lead.skills.join(' · ')}</div>
+        </>
+      )}
+
+      {lead.posts.length > 0 && (
+        <>
+          <div className="lbl">Posts · {lead.posts.length}</div>
+          {lead.posts.map((p, i) => (
+            <div className="post" key={i}>
+              <div className="post-text">{p.text}</div>
+              <div className="post-meta">
+                {[p.postedAt, p.engagement].filter(Boolean).join(' · ')}
+                {/^https?:\/\//.test(p.url) && (
+                  <>
+                    {(p.postedAt || p.engagement) ? ' · ' : ''}
+                    <a href={p.url} target="_blank" rel="noreferrer">view</a>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
         </>
       )}
     </div>

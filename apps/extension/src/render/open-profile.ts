@@ -41,11 +41,32 @@ export async function scrapeViaWindow(url: string, timeoutMs = 30000): Promise<u
   }, 1000);
   try {
     await waitForComplete(tabId, timeoutMs);
-    return await sendMessageWithRetry(tabId, { kind: 'scrapeProfile' });
+    const profile = await sendMessageWithRetry(tabId, { kind: 'scrapeProfile' });
+
+    // Best-effort second pass: reuse the same window to load the recent-activity feed and scrape
+    // posts. Wrapped so any failure (no activity page, navigation hiccup) never loses the profile.
+    try {
+      await chrome.tabs.update(tabId, { url: toRecentActivityUrl(url) });
+      await waitForComplete(tabId, timeoutMs);
+      const res = (await sendMessageWithRetry(tabId, { kind: 'scrapePosts', max: 20 })) as { posts?: unknown };
+      if (profile && typeof profile === 'object' && Array.isArray(res?.posts)) {
+        (profile as Record<string, unknown>).posts = res.posts;
+      }
+    } catch {
+      /* posts are optional — keep the profile we already have */
+    }
+
+    return profile;
   } finally {
     clearInterval(keepVisible);
     if (win.id != null) await chrome.windows.remove(win.id).catch(() => {});
   }
+}
+
+/** `…/in/<slug>[/…]` → `…/in/<slug>/recent-activity/all/` (where LinkedIn lists a person's posts). */
+export function toRecentActivityUrl(profileUrl: string): string {
+  const base = profileUrl.split(/[?#]/)[0].replace(/\/+$/, '');
+  return `${base}/recent-activity/all/`;
 }
 
 /**

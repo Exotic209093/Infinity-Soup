@@ -20,6 +20,8 @@ const sample: ScrapedProfile = {
   education: [{ school: 'MIT', degree: 'BSc', field: 'CS', startYear: 2012, endYear: 2016 }],
   skills: [{ name: 'TypeScript' }, { name: 'Leadership' }],
   certifications: [{ name: 'PMP', issuer: 'PMI', issuedDate: '2019' }],
+  posts: [{ urn: 'urn:li:activity:1', text: 'Hello world', postedAt: '2w', url: 'https://x/1', likes: 5, comments: 1, reposts: 0, isRepost: false }],
+  connections: 272, followers: 275, openToWork: false,
 };
 
 describe('LeadStore', () => {
@@ -34,6 +36,8 @@ describe('LeadStore', () => {
     expect(full.education).toHaveLength(1);
     expect(full.skills).toHaveLength(2);
     expect(full.certifications).toHaveLength(1);
+    expect(full.posts).toHaveLength(1);
+    expect((full.posts[0] as any).text).toBe('Hello world');
   });
 
   it('re-scraping the same profileUrl updates in place (no duplicate, children replaced)', () => {
@@ -42,5 +46,14 @@ describe('LeadStore', () => {
     expect(id2).toBe(id1);
     expect(store.all()).toHaveLength(1);
     expect(store.getFull(id1)!.skills.map((s: any) => s.name)).toEqual(['Rust']);
+  });
+
+  it('a re-scrape whose posts pass failed (posts: []) PRESERVES previously-saved posts', () => {
+    const id = store.upsertProfile(sample, 1000);                 // sample carries 1 post
+    store.upsertProfile({ ...sample, posts: [] }, 2000);          // activity pass returned nothing
+    expect(store.getFull(id)!.posts).toHaveLength(1);             // not wiped
+    // …but a scrape that genuinely brings posts replaces the set.
+    store.upsertProfile({ ...sample, posts: [{ urn: 'urn:li:activity:2', text: 'New post', postedAt: '1d', url: '', likes: 0, comments: 0, reposts: 0, isRepost: false }] }, 3000);
+    expect(store.getFull(id)!.posts.map((p: any) => p.text)).toEqual(['New post']);
   });
 });

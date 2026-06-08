@@ -27,9 +27,13 @@ export const ClientHelloSchema = z.object({ kind: z.literal('hello'), token: z.s
 export const ServerWelcomeSchema = z.object({ kind: z.literal('welcome') });
 export const ServerJobSchema = z.object({ kind: z.literal('job'), job: JobSchema });
 export const ClientResultSchema = z.object({ kind: z.literal('result'), result: ResultSchema });
+// Heartbeat: the hands pings on a timer to keep its MV3 service worker alive (WS traffic resets
+// Chrome's ~30s idle-kill timer); the brain answers pong. Carries no privileged data.
+export const ClientPingSchema = z.object({ kind: z.literal('ping') });
+export const ServerPongSchema = z.object({ kind: z.literal('pong') });
 
-export const ClientFrameSchema = z.union([ClientHelloSchema, ClientResultSchema]);
-export const ServerFrameSchema = z.union([ServerWelcomeSchema, ServerJobSchema]);
+export const ClientFrameSchema = z.union([ClientHelloSchema, ClientResultSchema, ClientPingSchema]);
+export const ServerFrameSchema = z.union([ServerWelcomeSchema, ServerJobSchema, ServerPongSchema]);
 export type ClientFrame = z.infer<typeof ClientFrameSchema>;
 export type ServerFrame = z.infer<typeof ServerFrameSchema>;
 
@@ -45,6 +49,21 @@ export const EducationSchema = z.object({
 export const SkillSchema = z.object({ name: z.string() });
 export const CertificationSchema = z.object({ name: z.string(), issuer: z.string().default(''), issuedDate: z.string().default('') });
 
+// A post / activity item scraped from the profile's recent-activity feed. All fields are
+// best-effort and default so a partial parse still yields a usable post (text is the only
+// thing that really matters for personalization).
+export const PostSchema = z.object({
+  urn: z.string().default(''),
+  text: z.string().default(''),
+  postedAt: z.string().default(''),   // as displayed on LinkedIn, e.g. "2w" / "3mo"
+  url: z.string().default(''),
+  likes: z.number().default(0),
+  comments: z.number().default(0),
+  reposts: z.number().default(0),
+  isRepost: z.boolean().default(false),
+});
+export type Post = z.infer<typeof PostSchema>;
+
 export const ScrapedProfileSchema = z.object({
   profileUrl: z.string(),
   fullName: z.string(),
@@ -57,15 +76,21 @@ export const ScrapedProfileSchema = z.object({
   education: z.array(EducationSchema).default([]),
   skills: z.array(SkillSchema).default([]),
   certifications: z.array(CertificationSchema).default([]),
+  posts: z.array(PostSchema).default([]),
+  connections: z.number().default(0),
+  followers: z.number().default(0),
+  openToWork: z.boolean().default(false),
 });
 export type ScrapedProfile = z.infer<typeof ScrapedProfileSchema>;
 
 export const ExperienceViewSchema = z.object({ title: z.string(), company: z.string(), dates: z.string(), isCurrent: z.boolean() });
 export const EducationViewSchema = z.object({ school: z.string(), years: z.string() });
+export const PostViewSchema = z.object({ text: z.string(), postedAt: z.string(), url: z.string(), engagement: z.string() });
 
 export const LeadSummarySchema = z.object({
   id: z.string(), fullName: z.string(), currentTitle: z.string(), currentCompany: z.string(),
   location: z.string(), expCount: z.number(), eduCount: z.number(), skillCount: z.number(),
+  postCount: z.number(),
   updatedAt: z.number().nullable(),
 });
 export type LeadSummary = z.infer<typeof LeadSummarySchema>;
@@ -74,7 +99,9 @@ export const LeadDetailSchema = z.object({
   id: z.string(), fullName: z.string(), headline: z.string(), location: z.string(),
   currentTitle: z.string(), currentCompany: z.string(), about: z.string(), profileUrl: z.string(),
   updatedAt: z.number().nullable(),
+  connections: z.number(), followers: z.number(), openToWork: z.boolean(),
   experience: z.array(ExperienceViewSchema), education: z.array(EducationViewSchema), skills: z.array(z.string()),
+  posts: z.array(PostViewSchema),
 });
 export type LeadDetail = z.infer<typeof LeadDetailSchema>;
 

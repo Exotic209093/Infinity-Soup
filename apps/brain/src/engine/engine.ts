@@ -6,6 +6,7 @@ import type { Dispatcher } from '../dispatcher.js';
 import type { EnrollmentRow, NodeRow } from '../db/schema.js';
 import type { Governor } from './governor.js';
 import { chooseCondition, isActionNode, jobPayload, waitMs } from './payload.js';
+import type { RecentPost } from '../ai/personalize.js';
 import { tripReason } from './breaker.js';
 
 type Now = () => number;
@@ -40,14 +41,15 @@ export class Engine {
 
     if (!isActionNode(node.type)) return this.enrollments.finish(e.id, 'failed', now);
 
-    const lead = this.leads.get(e.leadId);
-    if (!lead) return this.enrollments.finish(e.id, 'failed', now);
+    const full = this.leads.getFull(e.leadId);
+    if (!full) return this.enrollments.finish(e.id, 'failed', now);
+    const lead = full.lead;
 
     const decision = this.governor.canDispatch(node.type, lead.profileUrl, now);
     if (decision.kind === 'skip') return this.advance(e, node, now);
     if (decision.kind === 'defer') return this.enrollments.reschedule(e.id, decision.nextEligibleAt, now);
 
-    const job: Job = { id: this.genId(), type: node.type as JobType, target: lead.profileUrl, payload: jobPayload(node, lead) };
+    const job: Job = { id: this.genId(), type: node.type as JobType, target: lead.profileUrl, payload: jobPayload(node, lead, full.posts as RecentPost[]) };
     const delivered = this.dispatcher.enqueue(job);
     if (delivered) {
       this.enrollments.markDispatched(e.id, job.id, now);
