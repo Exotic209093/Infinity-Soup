@@ -36,3 +36,6 @@ Thumbs.db
 
 # Playwright MCP scratch (snapshots/screenshots)
 .playwright-mcp/
+
+# Claude Code local working data (worktrees, settings)
+.claude/
