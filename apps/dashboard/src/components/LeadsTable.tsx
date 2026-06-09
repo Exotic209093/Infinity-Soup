@@ -36,6 +36,7 @@ export function LeadsTable({
               <span>{l.expCount} exp</span>
               <span>{l.eduCount} edu</span>
               <span>{l.skillCount} skills</span>
+              {l.postCount > 0 && <span>{l.postCount} posts</span>}
             </td>
           </tr>
         ))}

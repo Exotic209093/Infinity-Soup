@@ -50,7 +50,7 @@ const hands = new HandsServer({ wss, token: config.token, onResult: (r) => {
     const parsed = ScrapedProfileSchema.safeParse(r.data);
     if (parsed.success) {
       const id = leadStore.upsertProfile(parsed.data, Date.now());
-      console.log('[lead]', id, parsed.data.fullName, '|', parsed.data.experience.length, 'exp', parsed.data.education.length, 'edu', parsed.data.skills.length, 'skills');
+      console.log('[lead]', id, parsed.data.fullName, '|', parsed.data.experience.length, 'exp', parsed.data.education.length, 'edu', parsed.data.skills.length, 'skills', parsed.data.posts.length, 'posts');
     } else {
       console.warn('[lead] invalid ScrapedProfile:', parsed.error.issues[0]);
     }

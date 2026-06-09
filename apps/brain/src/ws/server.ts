@@ -22,6 +22,8 @@ export class HandsServer {
       const parsed = ClientFrameSchema.safeParse(json);
       if (!parsed.success) return;
       const frame = parsed.data;
+      // Heartbeat: answer pings regardless of auth so a keepalive never trips the auth-close path.
+      if (frame.kind === 'ping') { ws.send(JSON.stringify({ kind: 'pong' })); return; }
       if (!authed) {
         if (frame.kind === 'hello' && frame.token === this.opts.token) {
           authed = true; this.hands = ws;

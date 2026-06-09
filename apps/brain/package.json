@@ -24,9 +24,11 @@
     "@anthropic-ai/sdk": "^0.39.0",
     "@aura/contract": "workspace:*",
     "@fastify/static": "^8.0.0",
+    "@google/genai": "^2.8.0",
     "better-sqlite3": "^12.10.0",
     "drizzle-orm": "^0.36.0",
     "fastify": "^5.0.0",
+    "openai": "^6.42.0",
     "ws": "^8.18.0",
     "zod": "^3.23.0"
   },

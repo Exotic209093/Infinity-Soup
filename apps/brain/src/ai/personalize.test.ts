@@ -12,6 +12,9 @@ function makeLead(overrides: Partial<LeadRow> = {}): LeadRow {
     about: 'I build things.',
     currentCompany: 'Acme Corp',
     currentTitle: 'Senior Engineer',
+    connections: null,
+    followers: null,
+    openToWork: null,
     profileRaw: null,
     status: 'new',
     createdAt: 1,
@@ -185,5 +188,45 @@ describe('renderText', () => {
   it('null client + no aiInstruction → uses template', async () => {
     const result = await renderText({ template: 'Hi {{firstName}}' }, lead);
     expect(result).toBe('Hi Jane');
+  });
+});
+
+// ────────────────────────────────────────────────
+// posts personalization (scraped recent-activity → {{recentPost}} + AI prompt)
+// ────────────────────────────────────────────────
+describe('posts personalization', () => {
+  const posts = [
+    { text: 'Shipping AURA — excited about agentic outreach!', postedAt: '2w' },
+    { text: '   ', postedAt: '1mo' }, // blank → skipped
+    { text: 'Thoughts on Claude Opus and code that should not exist', postedAt: '1mo' },
+  ];
+
+  it('templateVars exposes the latest non-empty post as {{recentPost}}', () => {
+    expect(templateVars(makeLead(), posts).recentPost).toBe('Shipping AURA — excited about agentic outreach!');
+  });
+
+  it('templateVars recentPost is empty when there are no posts', () => {
+    expect(templateVars(makeLead()).recentPost).toBe('');
+  });
+
+  it('fillTemplate can reference {{recentPost}}', () => {
+    const v = templateVars(makeLead(), posts);
+    expect(fillTemplate('Loved your post: "{{recentPost}}"', v))
+      .toBe('Loved your post: "Shipping AURA — excited about agentic outreach!"');
+  });
+
+  it('buildPrompt lists recent posts (skipping blanks) and omits the section when empty', () => {
+    const withPosts = buildPrompt('Reference a recent post', makeLead(), posts);
+    expect(withPosts).toContain('recent LinkedIn posts');
+    expect(withPosts).toContain('Shipping AURA');
+    expect(withPosts).toContain('code that should not exist');
+    expect(buildPrompt('Say hi', makeLead())).not.toContain('recent LinkedIn posts');
+  });
+
+  it('renderText threads posts into the AI prompt', async () => {
+    let seenPrompt = '';
+    const fakeAi: AiClient = { complete: vi.fn(async (p: string) => { seenPrompt = p; return 'msg'; }) };
+    await renderText({ template: 'Hi {{firstName}}', aiInstruction: 'ref a post' }, makeLead(), fakeAi, posts);
+    expect(seenPrompt).toContain('Shipping AURA');
   });
 });

@@ -3,6 +3,7 @@ import { parseProfileFields } from './profile-fields.js';
 import { parseExperience } from './experience.js';
 import { parseEducation } from './education.js';
 import { parseSkills, parseCertifications } from './skills.js';
+import { parseProfileExtras } from './extras.js';
 
 /**
  * Compose the per-section DOM parsers into a single contract-valid ScrapedProfile.
@@ -20,6 +21,7 @@ export function scrapeProfile(doc: Document, profileUrl: string): ScrapedProfile
   const fields = parseProfileFields(doc);
   const experience = parseExperience(doc);
   const current = experience.find((e) => e.isCurrent) ?? experience[0];
+  const extras = parseProfileExtras(doc);
   return {
     profileUrl,
     fullName: fields.fullName,
@@ -32,5 +34,9 @@ export function scrapeProfile(doc: Document, profileUrl: string): ScrapedProfile
     education: parseEducation(doc),
     skills: parseSkills(doc),
     certifications: parseCertifications(doc),
+    posts: [], // filled by the separate recent-activity pass (see render/open-profile.ts)
+    connections: extras.connections,
+    followers: extras.followers,
+    openToWork: extras.openToWork,
   };
 }

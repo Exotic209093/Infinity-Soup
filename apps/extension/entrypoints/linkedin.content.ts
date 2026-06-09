@@ -2,6 +2,7 @@ import { defineContentScript } from 'wxt/utils/define-content-script';
 import { waitForProfile } from '../src/parse/wait.js';
 import { scrapeProfile } from '../src/parse/scrape-profile.js';
 import { profileSectionsReady } from '../src/parse/sections-ready.js';
+import { parsePosts } from '../src/parse/posts.js';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -69,6 +70,34 @@ async function loadFullProfile(timeoutMs: number): Promise<void> {
   await sleep(200);
 }
 
+const POST_SELECTOR = 'div.feed-shared-update-v2, div[data-urn^="urn:li:activity"]';
+
+/**
+ * On the /recent-activity/all/ page, scroll the feed to lazy-load post cards until we have
+ * `target` of them, the feed stops growing, or the timeout elapses. Whatever rendered is then
+ * parsed — a partial set of recent posts is still useful.
+ */
+async function loadActivityFeed(timeoutMs: number, target: number): Promise<void> {
+  const start = Date.now();
+  await sleep(800);
+  let lastCount = -1;
+  let stable = 0;
+  while (Date.now() - start < timeoutMs) {
+    const count = document.querySelectorAll(POST_SELECTOR).length;
+    if (count >= target) break;
+    if (count === lastCount) { if (++stable >= 4) break; } // feed stopped growing
+    else { stable = 0; lastCount = count; }
+    const el = mainScroller();
+    el.scrollTop = el.scrollHeight;
+    el.dispatchEvent(new Event('scroll', { bubbles: true }));
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    window.dispatchEvent(new Event('scroll'));
+    await sleep(700);
+  }
+  mainScroller().scrollTop = 0;
+  await sleep(150);
+}
+
 export default defineContentScript({
   matches: ['https://www.linkedin.com/*'],
   main() {
@@ -85,6 +114,15 @@ export default defineContentScript({
         loadFullProfile(timeoutMs)
           .then(() => sendResponse(scrapeProfile(document, location.href)))
           .catch((e) => sendResponse({ fullName: '', error: String(e) }));
+        return true; // async response — keep the channel open
+      }
+      // M5: recent-activity posts — scroll the feed to load post cards, then DOM-parse them.
+      if (msg?.kind === 'scrapePosts') {
+        const timeoutMs = typeof msg.timeoutMs === 'number' ? msg.timeoutMs : 30000;
+        const max = typeof msg.max === 'number' ? msg.max : 20;
+        loadActivityFeed(timeoutMs, max)
+          .then(() => sendResponse({ posts: parsePosts(document, max) }))
+          .catch((e) => sendResponse({ posts: [], error: String(e) }));
         return true; // async response — keep the channel open
       }
       return; // do NOT keep the channel open for unrelated messages

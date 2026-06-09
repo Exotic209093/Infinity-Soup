@@ -10,7 +10,8 @@ const NewJobSchema = z.object({
 });
 
 export interface HttpDeps {
-  enqueue: (job: Job) => void;
+  /** Returns true iff a hands client was connected and received the job immediately. */
+  enqueue: (job: Job) => boolean;
   genId: () => string;
   listLeads: () => LeadSummary[];
   getLead: (id: string) => LeadDetail | null;
@@ -26,8 +27,10 @@ export function buildHttp(deps: HttpDeps): FastifyInstance {
     const parsed = NewJobSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid job' });
     const job = JobSchema.parse({ id: deps.genId(), ...parsed.data });
-    deps.enqueue(job);
-    return { id: job.id };
+    const delivered = deps.enqueue(job);
+    // `delivered: false` means no extension/hands is connected — the job is persisted but won't
+    // run until one connects (ad-hoc scrape jobs aren't re-dispatched), so callers can warn.
+    return { id: job.id, delivered };
   });
   app.get('/leads', async () => deps.listLeads());
   app.get('/leads.csv', async (_req, reply) => {

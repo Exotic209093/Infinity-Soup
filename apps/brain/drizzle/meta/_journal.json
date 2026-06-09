@@ -15,6 +15,20 @@
       "when": 1780666072744,
       "tag": "0001_strong_ravenous",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1780921803698,
+      "tag": "0002_complex_phantom_reporter",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1780930404517,
+      "tag": "0003_right_namor",
+      "breakpoints": true
     }
   ]
 }

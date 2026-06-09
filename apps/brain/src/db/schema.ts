@@ -22,6 +22,9 @@ export const lead = sqliteTable('lead', {
   about: text('about'),
   currentCompany: text('current_company'),
   currentTitle: text('current_title'),
+  connections: integer('connections'),
+  followers: integer('followers'),
+  openToWork: integer('open_to_work'),
   profileRaw: text('profile_raw', { mode: 'json' }).$type<Record<string, unknown>>(),
   status: text('status').notNull().default('new'),
   createdAt: integer('created_at').notNull(),
@@ -51,6 +54,13 @@ export const leadCertification = sqliteTable('lead_certification', {
   id: text('id').primaryKey(),
   leadId: text('lead_id').notNull().references(() => lead.id, { onDelete: 'cascade' }),
   name: text('name').notNull(), issuer: text('issuer'), issuedDate: text('issued_date'),
+});
+export const leadPost = sqliteTable('lead_post', {
+  id: text('id').primaryKey(),
+  leadId: text('lead_id').notNull().references(() => lead.id, { onDelete: 'cascade' }),
+  urn: text('urn'), text: text('text'), postedAt: text('posted_at'), url: text('url'),
+  likes: integer('likes'), comments: integer('comments'), reposts: integer('reposts'),
+  isRepost: integer('is_repost'),
 });
 
 export const account = sqliteTable('account', {
